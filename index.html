@@ -1,0 +1,1214 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="一日の流れ">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#edf1f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111615" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<style>
+html { -webkit-text-size-adjust: 100%; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<script>
+// claude.ai の外に置いた版の印。ホーム画面に追加する案内などを出す
+window.__SITE__ = true;
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+}
+</script>
+<title>一日の流れ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@700&display=swap">
+<style>
+/* レイアウト：iPad で片手でも押せる1列。上に時計、まん中に「今すること」、その下に今日の流れ、下にタブ5つ。
+   「今すること」の色は時間帯（朝・夕方・夜）で変える。 */
+:root {
+  --bg: #edf1f0;
+  --surface: #ffffff;
+  --surface-2: #e2e8e6;
+  --ink: #16201e;
+  --muted: #55625f;
+  --line: #cdd7d4;
+  --accent: #1d6b77;
+  --accent-ink: #ffffff;
+  --dawn: #c4681c;
+  --dusk: #b14e3a;
+  --night: #4651a3;
+  --ok: #2d8549;
+  --warn: #a96f12;
+  --bad: #b2352a;
+  --f-display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", sans-serif;
+  --f-body: "Zen Kaku Gothic New", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111615; --surface: #1a2120; --surface-2: #24302e; --ink: #e4edeb; --muted: #9caeaa; --line: #2e3b38;
+    --accent: #5db4c1; --accent-ink: #0b191b; --dawn: #efa05a; --dusk: #e48672; --night: #9aa2f2;
+    --ok: #6bc489; --warn: #e2b04e; --bad: #ef7d70; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111615; --surface: #1a2120; --surface-2: #24302e; --ink: #e4edeb; --muted: #9caeaa; --line: #2e3b38;
+  --accent: #5db4c1; --accent-ink: #0b191b; --dawn: #efa05a; --dusk: #e48672; --night: #9aa2f2;
+  --ok: #6bc489; --warn: #e2b04e; --bad: #ef7d70; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.6; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.wrap { max-width: 860px; margin: 0 auto; padding-inline: 16px; padding-block: 0 120px; }
+
+/* 上の帯 */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.top-in { max-width: 860px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.date { font-weight: 700; font-size: 17px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; letter-spacing: .04em; background: var(--surface-2); color: var(--muted); border: 0; white-space: nowrap; }
+button.chip { cursor: pointer; min-height: 30px; }
+.chip.cur { background: color-mix(in srgb, var(--warn) 18%, var(--surface)); color: var(--warn); }
+.chip.later { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent); }
+.chip.alarm { background: color-mix(in srgb, var(--dusk) 18%, var(--surface)); color: var(--dusk); }
+.chip.ok { background: color-mix(in srgb, var(--ok) 16%, var(--surface)); color: var(--ok); }
+.clock { margin-left: auto; font-family: var(--f-num); font-weight: 600; font-size: 30px; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.linkbtn { background: none; border: 0; color: var(--accent); font-weight: 700; padding: 6px 4px; cursor: pointer; }
+.notice { margin: 14px 0 0; font-size: 14px; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; padding: 10px 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.notice span { flex: 1 1 260px; min-width: 0; }
+.notice b { color: var(--ink); }
+
+/* 共通部品 */
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; }
+.row > * { flex: 1 1 200px; min-width: 0; }
+.card { background: var(--surface); border-radius: var(--r); padding: 20px; border: 1px solid var(--line); }
+.label { font-size: 13px; font-weight: 700; letter-spacing: .08em; color: var(--muted); }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+.display { font-family: var(--f-display); font-size: clamp(32px, 6vw, 50px); line-height: 1.2; }
+h2 { font-size: 24px; }
+h3 { font-size: 19px; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+.lead { font-size: 19px; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.big-num { font-family: var(--f-num); font-weight: 600; font-size: clamp(56px, 13vw, 96px); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
+.btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; min-height: 52px; padding: 10px 18px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2); font-weight: 700; font-size: 18px; cursor: pointer; text-align: center; text-decoration: none; color: var(--ink); }
+.btn.primary { min-height: 66px; font-size: 21px; background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.btn.go { background: var(--ok); color: var(--surface); border-color: transparent; }
+.btn.danger { color: var(--bad); }
+.btn.ghost { background: transparent; }
+.btn[disabled] { opacity: .45; cursor: default; }
+.btn:focus-visible, .tab:focus-visible, .linkbtn:focus-visible, .check:focus-visible, button.li:focus-visible, .chip:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+.banner { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 16px; border-radius: 14px; background: color-mix(in srgb, var(--warn) 14%, var(--surface)); }
+.banner.info { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.banner.ok { background: color-mix(in srgb, var(--ok) 14%, var(--surface)); }
+.banner > span { flex: 1 1 240px; min-width: 0; }
+button.banner { width: 100%; border: 0; text-align: left; cursor: pointer; }
+
+/* 今すること */
+.now { border: 0; padding: 24px; background: color-mix(in srgb, var(--period) 13%, var(--surface)); }
+.now .label { color: var(--period); }
+.period-morning { --period: var(--dawn); }
+.period-evening { --period: var(--dusk); }
+.period-night { --period: var(--night); }
+.next { display: flex; align-items: baseline; gap: 12px; }
+.next .t { margin-left: auto; font-family: var(--f-num); font-size: 22px; color: var(--muted); }
+.back { margin-top: 14px; }
+
+/* 目安の棒（縦の線が「ここまでやれば十分」の位置） */
+.prog { position: relative; height: 14px; border-radius: 7px; background: var(--surface-2); overflow: hidden; }
+.prog-fill { height: 100%; min-width: 8px; border-radius: 7px; background: var(--accent); }
+.prog-fill.reached { background: var(--ok); }
+.prog-mark { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink); opacity: .45; }
+
+/* チェックリスト */
+.check { display: flex; align-items: center; gap: 16px; width: 100%; padding: 14px 18px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font-size: 21px; cursor: pointer; text-align: left; }
+.check .box { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--muted); display: grid; place-items: center; font-size: 18px; color: var(--surface); }
+.check.on .box { background: var(--ok); border-color: var(--ok); }
+.check.on .txt { text-decoration: line-through; color: var(--muted); }
+
+/* 一覧 */
+.list { display: flex; flex-direction: column; }
+.li { display: flex; gap: 12px; align-items: baseline; padding: 12px 4px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.li:last-child { border-bottom: 0; }
+.li .time { font-family: var(--f-num); width: 56px; color: var(--muted); flex: none; }
+.li .body { flex: 1 1 160px; min-width: 0; }
+.li .end { margin-left: auto; }
+.li.past { opacity: .55; }
+.li.now-row .body { font-weight: 700; }
+button.li { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); text-align: left; cursor: pointer; }
+.compact .li { padding: 9px 4px; }
+.bar { height: 14px; border-radius: 7px; background: var(--accent); min-width: 2px; }
+.bars .li { align-items: center; }
+.bars .track { flex: 1 1 120px; min-width: 0; background: var(--surface-2); border-radius: 7px; }
+
+/* 入力 */
+input[type=text], input[type=time], input[type=number], input[type=url], select, textarea {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 12px; min-height: 46px; width: 100%; font-size: 17px;
+}
+textarea { min-height: 70px; resize: vertical; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.subjects { display: flex; gap: 10px; flex-wrap: wrap; }
+.subjects .btn { flex: 0 1 auto; min-height: 48px; font-size: 17px; }
+.subjects .btn.sel { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.days { display: flex; gap: 6px; flex-wrap: wrap; }
+.days button { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-weight: 700; cursor: pointer; }
+.days button.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.set-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.set-row:last-child { border-bottom: 0; }
+.set-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; }
+.toggle { display: flex; align-items: center; gap: 8px; min-height: 46px; }
+.toggle input { width: 22px; height: 22px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 700; font-size: 13px; letter-spacing: .04em; }
+.scroll { overflow-x: auto; }
+details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
+
+/* 下のタブ（5つ） */
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.tabs-in { max-width: 860px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.tab { border: 0; background: none; padding: 14px 4px 16px; font-size: 17px; font-weight: 700; color: var(--muted); cursor: pointer; }
+.tab.on { color: var(--accent); box-shadow: inset 0 3px 0 var(--accent); }
+
+/* 下から出る画面 */
+.sheet-bg { position: fixed; inset: 0; z-index: 10; background: color-mix(in srgb, var(--ink) 40%, transparent); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 720px; max-height: 88%; overflow-y: auto; background: var(--bg); border-radius: 20px 20px 0 0; padding: 22px 16px calc(24px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 760px) { .sheet-bg { align-items: center; } .sheet { border-radius: 20px; padding: 26px; } }
+@media (prefers-reduced-motion: no-preference) { .sheet { animation: up .18s ease-out; } @keyframes up { from { transform: translateY(16px); opacity: .6; } } }
+</style>
+</head>
+<body>
+<div class="top"><div class="top-in" id="top"></div></div>
+<div class="wrap">
+  <div id="notice"></div>
+  <main id="main"></main>
+</div>
+<nav class="tabs" aria-label="画面の切り替え"><div class="tabs-in" id="tabs"></div></nav>
+<div id="sheet"></div>
+
+<script src="logic.js" charset="utf-8"></script>
+<script>
+(function () {
+  'use strict';
+  var L = window.DayLogic;
+  var KEY = 'ichinichi-preview-v1';
+  var MIN = L.MIN;
+  // SITE = claude.ai の外に置いた版（ホーム画面に追加して使う）。STANDALONE = ホーム画面のアイコンから開いている
+  var SITE = !!window.__SITE__, STANDALONE = false;
+  try { STANDALONE = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches; } catch (e) {}
+  // 端末がデータを勝手に消しにくくするよう頼む（断られても動く）
+  try { if (SITE && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {}); } catch (e) {}
+
+  // ---------- 保存（このブラウザだけ） ----------
+  function fresh() { return { settings: L.defaultSettings(), days: {}, sessions: [], laundry: L.newLaundry(), subjects: ['簿記論'], sim: null, noticeRead: false, installHide: false }; }
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) { var d = JSON.parse(raw); if (d && d.settings && d.days) return d; }
+    } catch (e) { /* 読めなくても最初から動く */ }
+    return fresh();
+  }
+  var D = load();
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) { /* 保存できない環境でも動かす */ } }
+
+  // ---------- 時刻（「時刻を試す」で動かせる） ----------
+  function now() { return Date.now() + (D.sim ? D.sim.offset : 0); }
+  function today() { return L.dayKey(now()); }
+  function dayState(key) { if (!D.days[key]) D.days[key] = L.newDay(key); return D.days[key]; }
+  function S() { return D.settings; }
+
+  // ---------- 画面の状態 ----------
+  // tab: home / flow / study / workout / settings。route は tab の中の画面（home: curtain など、settings: status）
+  var V = { tab: 'home', route: null, flowOffset: 0, flowEdit: null, confirmSkip: null, laundryFull: false, oneCont: false,
+    oneLaundryLater: false, subject: null, sheet: null, staleSnooze: 0, confirm: null, noticeOpen: false };
+  var tabsDef = [['home', 'ホーム'], ['flow', '一日'], ['study', '勉強'], ['workout', '運動'], ['settings', '設定']];
+  try {
+    var h0 = (location.hash || '').replace('#', '');
+    if (tabsDef.some(function (t) { return t[0] === h0; })) V.tab = h0;
+    if (h0 === 'status') { V.tab = 'settings'; V.route = 'status'; }
+    if (h0 === 'laundry') { V.tab = 'home'; V.route = 'laundry'; }
+  } catch (e) {}
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function period(id) { var g = L.INFO[id] ? L.INFO[id].group : 'morning'; return 'period-' + g; }
+  function periodLabel(id) { var g = L.INFO[id] ? L.INFO[id].group : ''; return g === 'morning' ? '朝' : g === 'evening' ? '夕方' : '夜'; }
+  function t5(m) { var s = L.todText(m); return s.length < 5 ? '0' + s : s; }
+
+  // ---------- 音（ページを開いている間だけ） ----------
+  var AC = null, noiseSrc = null, chimeTimer = null;
+  function ctx() {
+    try {
+      if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+      if (AC.state === 'suspended') AC.resume();
+    } catch (e) { AC = null; }
+    return AC;
+  }
+  function tone(freq, start, dur, vol) {
+    var c = ctx(); if (!c) return;
+    var o = c.createOscillator(), g = c.createGain();
+    o.frequency.value = freq; o.type = 'sine';
+    g.gain.setValueAtTime(vol, c.currentTime + start);
+    g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + start + dur);
+    o.connect(g); g.connect(c.destination); o.start(c.currentTime + start); o.stop(c.currentTime + start + dur + 0.05);
+  }
+  function beep(high) { tone(high ? 1320 : 880, 0, high ? 0.35 : 0.2, 0.3); }
+  function chimeOnce() { tone(880, 0, 0.6, 0.35); tone(660, 0.6, 0.6, 0.35); }
+  function setChime(on) {
+    if (on && !chimeTimer) { chimeOnce(); chimeTimer = setInterval(chimeOnce, 2500); }
+    if (!on && chimeTimer) { clearInterval(chimeTimer); chimeTimer = null; }
+  }
+  function startNoise() {
+    var c = ctx(); if (!c || noiseSrc) return;
+    var len = c.sampleRate * 8, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0), last = 0, sm = 0;
+    for (var i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; sm += 0.08 * (last - sm); d[i] = sm * 3.5; }
+    noiseSrc = c.createBufferSource(); noiseSrc.buffer = buf; noiseSrc.loop = true;
+    var g = c.createGain(); g.gain.value = 0.4;
+    noiseSrc.connect(g); g.connect(c.destination); noiseSrc.start();
+  }
+  function stopNoise() { try { if (noiseSrc) noiseSrc.stop(); } catch (e) {} noiseSrc = null; }
+
+  // ---------- 計算のまとめ ----------
+  function openSession(slot) {
+    var t = today();
+    for (var i = 0; i < D.sessions.length; i++) { var x = D.sessions[i]; if (x.endedAt == null && x.day === t && x.slot === slot) return x; }
+    return null;
+  }
+  // 時刻に関係なく「今すること」に出し続ける項目。止め忘れの疑いがある計測は入れない
+  function activeSteps() {
+    var t = today(), ds = dayState(t), n = now();
+    var a = L.activeStudySteps(D.sessions, t, n, S(), V.staleSnooze > n);
+    if (ds.workout && !L.isFinished(ds.workout)) a.workout = true;
+    if (ds.meditation && ds.meditation.endedAt == null && !L.finished(ds, 'meditation')) a.meditation = true;
+    return a;
+  }
+  function snap() { var t = today(); return L.snapshot(now(), S(), dayState(t), activeSteps()); }
+  function staleSession() {
+    if (V.staleSnooze > now()) return null;
+    for (var i = 0; i < D.sessions.length; i++) if (L.needsConfirm(D.sessions[i], now(), S())) return D.sessions[i];
+    return null;
+  }
+  function timeHint(s) {
+    var n = now();
+    if (s.id === 'workout') { var e = L.dateAt(today(), S().workout.end); return L.fmtTime(e) + 'まで（あと' + L.fmtMin((e - n) / 1000) + '）'; }
+    if (n < s.start) return L.fmtTime(s.start) + 'から（あと' + L.fmtMin((s.start - n) / 1000) + '）';
+    if (s.end > s.start && n < s.end) return L.fmtTime(s.end) + 'まで（あと' + L.fmtMin((s.end - n) / 1000) + '）';
+    return '予定 ' + L.fmtTime(s.start);
+  }
+  function selectedSubject() { return V.subject != null ? V.subject : (D.subjects[0] || ''); }
+  // 一覧に出す状態の札。「今」は「今すること」に出ている1つだけ
+  function phaseChip(st, curId, n) {
+    var p = L.phase(st, n), r = st.rec;
+    if (p === 'now' && st.id !== curId) p = 'upcoming';
+    if (p === 'done') return '<span class="chip ok">完了' + (r.at ? ' ' + L.fmtTime(r.at) : '') + '</span>';
+    if (p === 'skipped') return '<span class="chip">省略</span>';
+    if (p === 'now') return '<span class="chip cur">今</span>';
+    if (p === 'later') return '<span class="chip later">あとで ' + L.fmtTime(r.laterUntil) + '</span>';
+    if (p === 'upcoming') return '<span class="chip">これから</span>';
+    return '<span class="chip">未実施</span>';
+  }
+  // 勉強の目安のどこまで来たか
+  function progInfo(x, n) {
+    var s = S(), el = L.activeSec(x, n);
+    if (x.slot === 'morning1' || x.slot === 'morning2') {
+      var lo = s.study.min * 60, hi = s.study.max * 60, cap;
+      if (el < lo) cap = '目安 ' + s.study.min + '〜' + s.study.max + '分。' + s.study.min + '分まであと' + L.fmtDur(lo - el);
+      else if (el < hi) cap = s.study.min + '分をこえました。ここで終えても大丈夫（' + s.study.max + '分まであと' + L.fmtMin(hi - el) + '）';
+      else cap = s.study.max + '分たちました。ここで終えても大丈夫';
+      return { ratio: Math.min(1, el / hi), mark: lo / hi, reached: el >= lo, cap: cap };
+    }
+    if (x.slot === 'night') {
+      var wrap = L.dateAt(x.day, s.steps.nightStudy.time + s.steps.nightStudy.dur), total = (wrap - x.startedAt) / 1000;
+      if (total <= 0) return null;
+      var passed = (n - x.startedAt) / 1000;
+      return { ratio: Math.max(0, Math.min(1, passed / total)), mark: null, reached: passed >= total,
+        cap: passed < total ? '終了処理（' + L.fmtTime(wrap) + '）まであと' + L.fmtMin(total - passed) : '終了処理の時間です。続きと間違いメモを書いて保存しよう' };
+    }
+    return null;
+  }
+
+  // ---------- 操作 ----------
+  function commitDay(f) { var ds = dayState(today()); f(ds, now()); save(); render(); }
+  function go(route) {
+    if (route === 'workout') { V.tab = 'workout'; V.route = null; }
+    else if (route === 'status') { V.tab = 'settings'; V.route = 'status'; }
+    else { V.tab = 'home'; V.route = route; }
+    window.scrollTo(0, 0); render();
+  }
+  function completeStep(id, method) {
+    commitDay(function (ds, t) { L.complete(ds, id, t, method); });
+    if (id === 'wake') setChime(false);
+  }
+  function startStudy(slot, subject, material) {
+    var ex = openSession(slot); if (ex) return ex;
+    var t = now(), sub = (subject || '').trim();
+    var x = { id: 's' + t + Math.floor(Math.random() * 1000), day: today(), slot: slot, subject: sub, startedAt: t, endedAt: null, pauses: [],
+      content: '', material: material || '', pages: '', nextNote: '', mistakeNote: '', confirmedLater: false };
+    D.sessions.push(x);
+    if (sub) { D.subjects = [sub].concat(D.subjects.filter(function (s) { return s !== sub; })).slice(0, 8); }
+    if (slot === 'night') { var ds = dayState(today()); if (!ds.nightStudyStartedAt) ds.nightStudyStartedAt = t; }
+    save(); return x;
+  }
+  function findSession(id) { for (var i = 0; i < D.sessions.length; i++) if (D.sessions[i].id === id) return D.sessions[i]; return null; }
+  function finishStudy(id, end, later) {
+    var x = findSession(id); if (!x || x.endedAt != null) return;
+    var t = Math.max(end != null ? end : now(), x.startedAt);
+    var lp = x.pauses[x.pauses.length - 1]; if (lp && lp.end == null) lp.end = t;
+    x.endedAt = t; if (later) x.confirmedLater = true;
+    var step = L.SLOT_STEP[x.slot];
+    if (step) { var ds = dayState(x.day); if (!L.finished(ds, step)) L.complete(ds, step, t); }
+    save();
+  }
+  function workoutDo(f) {
+    var ds = dayState(today()), w = ds.workout; if (!w) return;
+    f(w, now());
+    if (L.isFinished(w) && !L.finished(ds, 'workout')) L.complete(ds, 'workout', w.finishedAt);
+    save(); render();
+  }
+  function startMeditation(extend) {
+    var t = now(), st = S().steps.meditation, standard = L.dateAt(today(), st.time + st.dur);
+    var useExt = extend || standard - t < 60e3;
+    var end = useExt ? t + S().meditation.extend * MIN : standard;
+    commitDay(function (ds) { ds.meditation = { startedAt: t, plannedEnd: end, extended: useExt, endedAt: null }; L.log(ds, '瞑想開始（' + L.fmtTime(end) + 'まで）', t); });
+    startNoise();
+  }
+  function finishMeditation(natural) {
+    stopNoise();
+    commitDay(function (ds, t) {
+      if (ds.meditation && ds.meditation.endedAt == null) ds.meditation.endedAt = natural ? Math.max(t, ds.meditation.plannedEnd) : t;
+      if (!L.finished(ds, 'meditation')) L.complete(ds, 'meditation', t);
+    });
+  }
+  function applyTime(day, tm) { D.sim = { offset: L.dateAt(day, tm) - Date.now() }; V.sheet = null; V.route = null; V.tab = 'home'; save(); render(); }
+
+  var A = {
+    tab: function (b) { V.tab = b.dataset.v; V.route = null; V.flowEdit = null; try { history.replaceState(null, '', '#' + V.tab); } catch (e) {} window.scrollTo(0, 0); render(); },
+    go: function (b) { go(b.dataset.v); },
+    home: function () { V.route = null; V.tab = 'home'; render(); },
+    settingsHome: function () { V.route = null; V.tab = 'settings'; render(); },
+    notice: function () { V.noticeOpen = !V.noticeOpen; render(); },
+    noticeRead: function () { D.noticeRead = true; V.noticeOpen = false; save(); render(); },
+    later: function (b) { var id = b.dataset.v; commitDay(function (ds, t) { L.later(ds, id, t, S().laterMinutes); }); },
+    askSkip: function (b) { V.confirmSkip = b.dataset.v; render(); },
+    cancelSkip: function () { V.confirmSkip = null; render(); },
+    skip: function (b) { var id = b.dataset.v; V.confirmSkip = null; if (id === 'meditation') stopNoise(); commitDay(function (ds, t) { L.skip(ds, id, t); }); },
+    done: function (b) { completeStep(b.dataset.v); },
+    // チェックを付け外しする。最後の1つにチェックが付いたら完了にする
+    check: function (b) {
+      var id = b.dataset.v, item = b.dataset.item;
+      commitDay(function (ds, t) {
+        L.upd(ds, id, function (r) { var i = r.checks.indexOf(item); if (i >= 0) r.checks.splice(i, 1); else r.checks.push(item); });
+        var r = L.rec(ds, id), items = L.INFO[id].checklist;
+        if (r.status === 'pending' && items.length && items.every(function (x) { return r.checks.indexOf(x) >= 0; })) L.complete(ds, id, t);
+      });
+    },
+    curtain: function () { completeStep('wake', 'ボタンで確認'); },
+    chime: function () { setChime(!chimeTimer); render(); },
+    medStart: function (b) { startMeditation(b.dataset.v === 'ext'); },
+    medExtend: function () {
+      var t = now(), end = t + S().meditation.extend * MIN;
+      commitDay(function (ds) { ds.meditation.plannedEnd = end; ds.meditation.extended = true; L.log(ds, '瞑想を延長', t); });
+    },
+    medStop: function () { finishMeditation(false); },
+    // 「今日は省略して身支度へ」：省略したら、そのまま身支度の画面へ進む
+    medSkip: function () { stopNoise(); var ds = dayState(today()); L.skip(ds, 'meditation', now()); save(); go('checklist.dressing'); },
+    noise: function () { if (noiseSrc) stopNoise(); else startNoise(); render(); },
+    subject: function (b) { V.subject = b.dataset.v; render(); },
+    studyStart: function (b) {
+      var inp = document.getElementById('subject-input');
+      startStudy(b.dataset.v, inp ? inp.value : selectedSubject(), ''); render();
+    },
+    studyCont: function (b) { var c = findSession(b.dataset.id); startStudy(b.dataset.v, c ? c.subject : '', c ? c.material : ''); render(); },
+    studyPause: function (b) { var x = findSession(b.dataset.id); if (x && L.sessionState(x) === 'running') x.pauses.push({ start: now(), end: null }); save(); render(); },
+    studyResume: function (b) { var x = findSession(b.dataset.id); if (x && L.sessionState(x) === 'paused') x.pauses[x.pauses.length - 1].end = now(); save(); render(); },
+    studyFinish: function (b) { finishStudy(b.dataset.id); V.sheet = { type: 'finish', id: b.dataset.id }; render(); },
+    oneStart: function () { V.oneCont = false; ctx(); startStudy('afterZumba', selectedSubject()); go('oneMinute'); },
+    oneCont: function () { V.oneCont = true; render(); },
+    oneFinish: function (b) { finishStudy(b.dataset.id); render(); },
+    oneLaundryLater: function () { V.oneLaundryLater = true; render(); },
+    wStart: function () {
+      ctx();
+      var ds = dayState(today()), t = now();
+      ds.workout = L.startWorkout(today(), t, S()); L.log(ds, '運動開始', t); save(); go('workout');
+    },
+    wPause: function () { workoutDo(L.pauseWorkout); },
+    wResume: function () { workoutDo(L.resumeWorkout); },
+    wNext: function () { workoutDo(L.completeCurrent); },
+    wSkip: function () { workoutDo(L.skipCurrent); },
+    wEndAsk: function () { V.confirm = 'wEnd'; render(); },
+    wEnd: function () { V.confirm = null; workoutDo(L.finishWorkout); },
+    cancelConfirm: function () { V.confirm = null; render(); },
+    lFull: function () { V.laundryFull = true; go('laundry'); },
+    lStart: function () {
+      var t = now(); L.laundryStart(D.laundry, t, S().laundry.duration); V.laundryFull = false;
+      var ds = dayState(today()); if (!L.finished(ds, 'laundryCheck')) L.complete(ds, 'laundryCheck', t, '洗濯開始');
+      save(); render();
+    },
+    lSkip: function () {
+      var t = now(); L.laundrySkip(D.laundry, t); V.laundryFull = false;
+      var ds = dayState(today()); if (!L.finished(ds, 'laundryCheck')) L.complete(ds, 'laundryCheck', t, '洗濯しない');
+      save(); render();
+    },
+    lNotYet: function () { L.laundryNotYet(D.laundry, now(), S().laundry.reNotify); save(); render(); },
+    lHung: function () { L.laundryHang(D.laundry, now()); save(); render(); },
+    lClose: function (b) { L.laundryClose(D.laundry); if (b.dataset.v === 'again') V.laundryFull = true; save(); render(); },
+    flowDay: function (b) { V.flowOffset = Math.min(0, V.flowOffset + Number(b.dataset.v)); V.flowEdit = null; render(); },
+    flowEdit: function (b) { V.flowEdit = V.flowEdit === b.dataset.v ? null : b.dataset.v; render(); },
+    flowSet: function (b) {
+      var key = L.addDays(today(), V.flowOffset), ds = dayState(key), id = b.dataset.id, v = b.dataset.v;
+      var t = V.flowOffset === 0 ? now() : L.dateAt(key, S().steps[id].time);
+      if (v === 'done') L.complete(ds, id, t, 'あとから訂正'); else if (v === 'skip') L.skip(ds, id, t); else L.reopen(ds, id, now());
+      V.flowEdit = null; save(); render();
+    },
+    timeOpen: function () { V.sheet = { type: 'time' }; render(); },
+    timeSet: function () {
+      var tm = L.parseTod(document.getElementById('tt-time').value);
+      if (tm != null) applyTime(document.getElementById('tt-day').value, tm);
+    },
+    // 時刻のボタンは、押した時点でその時刻に切り替える
+    timePreset: function (b) { applyTime(document.getElementById('tt-day').value, L.parseTod(b.dataset.v)); },
+    timeReal: function () { D.sim = null; V.sheet = null; save(); render(); },
+    closeSheet: function () { V.sheet = null; render(); },
+    saveFinish: function (b) {
+      var x = findSession(b.dataset.id);
+      if (x) ['content', 'material', 'pages', 'nextNote', 'mistakeNote', 'subject'].forEach(function (k) { var el = document.getElementById('f-' + k); if (el) x[k] = el.value; });
+      V.sheet = null; save(); render();
+    },
+    editSession: function (b) { V.sheet = { type: 'edit', id: b.dataset.id }; render(); },
+    askDelete: function () { V.sheet.del = true; render(); },
+    deleteSession: function (b) { D.sessions = D.sessions.filter(function (x) { return x.id !== b.dataset.id; }); V.sheet = null; save(); render(); },
+    staleConfirm: function (b) {
+      var x = findSession(b.dataset.id), tm = L.parseTod(document.getElementById('stale-time').value);
+      if (!x || tm == null) return;
+      var end = Math.min(Math.max(L.dateAt(x.day, tm), x.startedAt), now());
+      finishStudy(x.id, end, true); render();
+    },
+    staleSnooze: function () { V.staleSnooze = now() + 15 * MIN; render(); },
+    staleDelete: function (b) { D.sessions = D.sessions.filter(function (x) { return x.id !== b.dataset.id; }); save(); render(); },
+    copyCSV: function (b) {
+      var csv = studyCSV();
+      var done = function () { b.textContent = 'コピーしました'; };
+      try { navigator.clipboard.writeText(csv).then(done, function () { V.sheet = { type: 'csv', text: csv }; render(); }); }
+      catch (e) { V.sheet = { type: 'csv', text: csv }; render(); }
+    },
+    day: function (b) {
+      var id = b.dataset.id, d = Number(b.dataset.v), s = S().steps[id], i = s.days.indexOf(d);
+      if (i >= 0) s.days.splice(i, 1); else { s.days.push(d); s.days.sort(); }
+      save(); render();
+    },
+    askReset: function () { V.confirm = 'reset'; render(); },
+    reset: function () { stopNoise(); setChime(false); D = fresh(); V.confirm = null; save(); render(); },
+    installHide: function () { D.installHide = true; save(); render(); },
+    reload: function () { try { location.reload(); } catch (e) {} },
+    // バックアップ：記録と設定をまるごと文字にして写す／貼り付けて戻す（Safari とホーム画面のアプリは保存場所が別なので、移すときにも使う）
+    backupCopy: function (b) {
+      var text = JSON.stringify({ app: 'ichinichi', savedAt: L.dayKey(Date.now()), data: Object.assign({}, D, { sim: null }) });
+      var show = function () { V.sheet = { type: 'text', title: 'バックアップ', text: text }; render(); };
+      try { navigator.clipboard.writeText(text).then(function () { b.textContent = 'コピーしました（メモなどに貼って保存）'; }, show); } catch (e) { show(); }
+    },
+    backupOpen: function () { V.sheet = { type: 'restore' }; render(); },
+    backupRestore: function () {
+      var el = document.getElementById('restore-text'), msg = null;
+      try {
+        var o = JSON.parse(el.value), d = o && o.app === 'ichinichi' ? o.data : null;
+        if (d && d.settings && d.days && Array.isArray(d.sessions)) { stopNoise(); setChime(false); D = d; D.sim = null; V.sheet = null; save(); render(); return; }
+        msg = 'このアプリのバックアップではないようです。';
+      } catch (e) { msg = '読み取れませんでした。バックアップの文字をすべて貼り付けてください。'; }
+      V.sheet = { type: 'restore', error: msg, text: el.value }; render();
+    }
+  };
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-a]'); if (!b) return;
+    var f = A[b.dataset.a]; if (f) { e.preventDefault(); f(b); }
+  });
+
+  // 設定の入力（変えたらすぐ保存）
+  document.addEventListener('change', function (e) {
+    var el = e.target, p = el.dataset && el.dataset.s; if (!p) return;
+    var s = S(), v = el.type === 'checkbox' ? el.checked : el.value;
+    var kind = el.dataset.k;
+    if (kind === 'time') { v = L.parseTod(v); if (v == null) return; }
+    if (kind === 'int') { v = parseInt(v, 10); if (isNaN(v)) return; v = Math.max(Number(el.min || 0), Math.min(Number(el.max || 999), v)); }
+    if (kind === 'null') v = v || null;
+    if (p === 'zumbaUrl') { setZumba(v); save(); render(); return; }
+    var keys = p.split('.'), o = s;
+    for (var i = 0; i < keys.length - 1; i++) o = o[keys[i]];
+    o[keys[keys.length - 1]] = v;
+    save(); render();
+  });
+  function setZumba(url) {
+    var s = S(); s.videos = s.videos.filter(function (v) { return v.cat !== 'zumba'; });
+    if (url) { s.videos.push({ id: 'zumba', title: 'ZUMBA（登録した動画）', url: url, cat: 'zumba', sec: null, titleMin: null, note: '' }); s.zumbaVideo = 'zumba'; }
+    else s.zumbaVideo = null;
+  }
+
+  // ---------- 描画 ----------
+  function renderTop() {
+    var t = today();
+    document.getElementById('top').innerHTML =
+      '<span class="date">' + L.dayLabel(t) + '</span>' +
+      (D.sim ? '<span class="chip cur">時刻を試しています</span>' : '') +
+      (D.noticeRead ? '<button class="chip" data-a="notice" aria-expanded="' + V.noticeOpen + '">' + (SITE ? 'Web版' : '試用版') + '・通知は鳴りません</button>' : '<span class="chip">' + (SITE ? 'Web版' : '試用版') + '</span>') +
+      '<button class="linkbtn" data-a="timeOpen">時刻を試す</button>' +
+      '<span class="clock" id="clock">' + clockText() + '</span>';
+    var noticeText = SITE
+      ? '<b>Web版です。</b>開いている間の案内と記録ができます。<b>閉じている間の通知・アラームは鳴りません</b>（プッシュ通知は未設定）。起床などの目覚ましは、iPad の「時計」のアラームを使ってください。記録はこの端末の中だけに保存します。'
+      : '<b>試用版です。</b>画面と一日の流れを確かめるためのページで、<b>通知・アラームは鳴りません</b>。本番の iPad アプリ（AlarmKit とローカル通知を使う）はまだビルド前です。記録はこのブラウザの中だけに残り、消えることがあります。';
+    document.getElementById('notice').innerHTML = (!D.noticeRead || V.noticeOpen)
+      ? '<div class="notice"><span>' + noticeText + '</span>' +
+        '<button class="btn" style="min-height:40px;font-size:15px" data-a="' + (D.noticeRead ? 'notice' : 'noticeRead') + '">' + (D.noticeRead ? '閉じる' : 'わかった（たたむ）') + '</button></div>'
+      : '';
+    document.getElementById('tabs').innerHTML = tabsDef.map(function (x) {
+      return '<button class="tab' + (V.tab === x[0] ? ' on' : '') + '" data-a="tab" data-v="' + x[0] + '"' + (V.tab === x[0] ? ' aria-current="page"' : '') + '>' + x[1] + '</button>';
+    }).join('');
+  }
+  function clockText() { var p = L.parts(now()); return p.h + ':' + L.pad(p.mi) + '<span class="muted" style="font-size:.6em">:' + L.pad(p.s) + '</span>'; }
+  function backBtn() { return '<div class="back"><button class="btn ghost" data-a="home">← ホームへ</button></div>'; }
+  function zumbaVideo() { return S().videos.filter(function (v) { return v.id === S().zumbaVideo; })[0]; }
+
+  // ----- 部品：ホームと各画面の両方で使う -----
+  function meditationControls() {
+    var ds = dayState(today()), m = ds.meditation, st = S().steps.meditation, ext = S().meditation.extend;
+    var standard = L.dateAt(today(), st.time + st.dur);
+    if (m && m.endedAt == null) {
+      return '<span class="label">' + L.fmtTime(m.plannedEnd) + ' まで</span>' +
+        '<div class="big-num" data-cd="' + m.plannedEnd + '">' + L.fmtClock((m.plannedEnd - now()) / 1000) + '</div>' +
+        '<p>横になったまま、ゆっくり呼吸しよう</p>' +
+        '<div class="row"><button class="btn" data-a="noise">' + (noiseSrc ? '音を止める' : 'やわらかいノイズを流す') + '</button><button class="btn" data-a="medExtend">ここから' + ext + '分に延長</button></div>' +
+        '<button class="btn" data-a="medStop">終える</button>';
+    }
+    var remain = standard - now();
+    if (remain >= 60e3) {
+      return '<p class="lead">標準は ' + L.fmtTime(standard) + ' 終了。残り ' + L.fmtMin(remain / 1000) + '</p>' +
+        '<button class="btn primary" data-a="medStart" data-v="std" style="background:var(--night)">' + L.fmtTime(standard) + 'まで瞑想する</button>' +
+        '<button class="btn" data-a="medStart" data-v="ext">ここから' + ext + '分にする</button>';
+    }
+    return '<p class="lead">標準の終了時刻（' + L.fmtTime(standard) + '）を過ぎています</p>' +
+      '<button class="btn primary" data-a="medStart" data-v="ext" style="background:var(--night)">ここから' + ext + '分 瞑想する</button>';
+  }
+
+  function checklistItems(id) {
+    var info = L.INFO[id], r = L.rec(dayState(today()), id), h = '';
+    info.checklist.forEach(function (item) {
+      var on = r.checks.indexOf(item) >= 0 || r.status === 'done';
+      h += '<button class="check' + (on ? ' on' : '') + '" data-a="check" data-v="' + id + '" data-item="' + esc(item) + '" aria-pressed="' + on + '"><span class="box">✓</span><span class="txt">' + esc(item) + '</span></button>';
+    });
+    if (r.status === 'pending') h += '<button class="btn primary" data-a="done" data-v="' + id + '">ぜんぶ済んだ</button>';
+    return h;
+  }
+
+  function progressBar(x) {
+    var p = progInfo(x, now()); if (!p) return '';
+    return '<div class="prog" aria-hidden="true"><div class="prog-fill' + (p.reached ? ' reached' : '') + '" data-prog="' + x.id + '" style="width:' + (p.ratio * 100).toFixed(1) + '%"></div>' +
+      (p.mark != null && p.mark < 1 ? '<span class="prog-mark" style="left:' + (p.mark * 100).toFixed(1) + '%"></span>' : '') + '</div>' +
+      '<p class="small muted num" data-progcap="' + x.id + '">' + p.cap + '</p>';
+  }
+
+  // 計測中なら時計と操作、まだなら科目と「開始」。compact = ホーム用（科目は押すだけ）
+  function studyControls(slot, compact) {
+    var x = openSession(slot), n = now(), t = today(), h = '';
+    if (x) {
+      var paused = L.sessionState(x) === 'paused';
+      return '<h2>' + esc(x.subject || '科目なし') + '</h2>' + (x.material ? '<span class="muted">教材：' + esc(x.material) + '</span>' : '') +
+        '<div class="big-num" data-el="' + x.id + '">' + L.fmtClock(L.activeSec(x, n)) + '</div>' +
+        '<span class="muted">' + (paused ? '一時停止中' : L.fmtTime(x.startedAt) + 'から計測中') + '</span>' + progressBar(x) +
+        '<div class="row">' + (paused ? '<button class="btn" data-a="studyResume" data-id="' + x.id + '">再開</button>' : '<button class="btn" data-a="studyPause" data-id="' + x.id + '">一時停止</button>') +
+        '<button class="btn danger" data-a="studyFinish" data-id="' + x.id + '">終了</button></div>';
+    }
+    var cont = L.continuation(slot, t, D.sessions), sel = selectedSubject();
+    if (cont && (cont.nextNote || cont.material)) {
+      h += '<section class="card"><div class="stack"><span class="label">前回の続き（' + L.shortLabel(cont.day) + ' ' + L.SLOT[cont.slot] + '・' + esc(cont.subject) + '）</span>' +
+        (cont.nextNote ? '<p class="lead">' + esc(cont.nextNote) + '</p>' : '') +
+        (cont.material || cont.pages ? '<span class="muted">教材：' + esc(cont.material) + ' ' + esc(cont.pages) + '</span>' : '') +
+        '<button class="btn" data-a="studyCont" data-v="' + slot + '" data-id="' + cont.id + '">続きから始める</button></div></section>';
+    }
+    if (D.subjects.length) h += '<div class="subjects">' + D.subjects.map(function (s) { return '<button class="btn' + (s === sel ? ' sel' : '') + '" data-a="subject" data-v="' + esc(s) + '" aria-pressed="' + (s === sel) + '">' + esc(s) + '</button>'; }).join('') + '</div>';
+    var base = slot === 'night' ? '演習開始' : '開始';
+    if (compact) {
+      h += '<button class="btn primary" data-a="studyStart" data-v="' + slot + '">' + base + (sel ? '（' + esc(sel) + '）' : '') + '</button>' +
+        '<button class="linkbtn" style="align-self:flex-start" data-a="go" data-v="study.' + slot + '">科目を入力して始める</button>';
+    } else {
+      h += '<div class="field"><label class="label" for="subject-input">科目</label><input type="text" id="subject-input" value="' + esc(sel) + '" placeholder="科目を入力（例：簿記論）"></div>' +
+        '<button class="btn primary" data-a="studyStart" data-v="' + slot + '">' + base + '</button>';
+    }
+    if (slot === 'night') h += '<p class="small muted">アプリを開いただけでは開始になりません。「演習開始」を押すと、残りの催促を取り消して計測を始めます。</p>';
+    return h;
+  }
+
+  // 「今すること」をホームで直接進めるボタン。別の画面へ移るだけのボタンにはしない
+  function nowActions(c) {
+    var r = c.route, id = c.id, ds = dayState(today());
+    if (r === 'curtain') return '<button class="btn primary" data-a="curtain" style="background:var(--dawn)">カーテンを開けた</button>';
+    if (r === 'meditation') return meditationControls();
+    if (r.indexOf('checklist.') === 0) return checklistItems(id);
+    if (r.indexOf('study.') === 0) return studyControls(r.split('.')[1], true);
+    if (r === 'oneMinute') return openSession('afterZumba')
+      ? '<button class="btn primary" data-a="go" data-v="oneMinute">計測中の画面へ</button>'
+      : '<button class="btn primary go" data-a="oneStart">1分だけ勉強を始める</button>';
+    if (r === 'workout') return ds.workout
+      ? '<button class="btn primary" data-a="go" data-v="workout">運動中の画面へ</button>'
+      : '<button class="btn primary go" data-a="wStart">運動開始</button>';
+    if (r === 'laundry') return '<button class="btn primary" data-a="lFull">いっぱい</button><button class="btn" data-a="lSkip">いっぱいではない（今日は洗濯しない）</button>';
+    var z = zumbaVideo();
+    return (id === 'zumba' && z ? '<a class="btn" href="' + esc(z.url) + '" target="_blank" rel="noopener">ZUMBAの動画を開く</a>' : '') +
+      '<button class="btn primary" data-a="done" data-v="' + id + '">完了</button>';
+  }
+
+  function todayCard(sn, n) {
+    var cur = sn.current ? sn.current.id : null;
+    return '<section class="card"><span class="label">今日の流れ（行を押すとその画面へ）</span><div class="list compact">' + sn.steps.map(function (st) {
+      var p = L.phase(st, n), dim = p === 'done' || p === 'skipped' || p === 'missed';
+      return '<button class="li' + (dim ? ' past' : '') + (st.id === cur ? ' now-row' : '') + '" data-a="go" data-v="' + st.route + '"><span class="time">' + L.todText(st.setting.time) + '</span><span class="body">' + esc(st.title) + '</span><span class="end">' + phaseChip(st, cur, n) + '</span></button>';
+    }).join('') + '</div></section>';
+  }
+
+  function homeView() {
+    var sn = snap(), out = [], st = staleSession(), n = now(), act = activeSteps();
+    // Safari で開いているとき：ホーム画面に追加する手順を出す（ホーム画面から開いているときは出さない）
+    if (SITE && !STANDALONE && !D.installHide) {
+      out.push('<section class="card"><div class="stack"><span class="label">ホーム画面に追加して使う</span>' +
+        '<p>1. Safari の共有ボタン（四角から上向きの矢印が出ている形）を押す</p>' +
+        '<p>2. 「ホーム画面に追加」を選ぶ（「Webアプリとして開く」の切り替えが出たらオンのまま）</p>' +
+        '<p>3. 「追加」を押し、これからはホーム画面の「一日の流れ」のアイコンから開く</p>' +
+        '<p class="small muted">記録は、Safari で開いたときとホーム画面から開いたときで別々に保存されます。追加したあとはホーム画面のほうだけを使ってください。Safari で付けた記録を持っていきたいときは、設定の「バックアップ」で移せます。</p>' +
+        '<button class="btn ghost" data-a="installHide">この案内を隠す</button></div></section>');
+    }
+    if (st) out.push(staleCard(st));
+    if (sn.rest) out.push('<div class="banner ok"><span>今日は運動・勉強はお休みの日です</span></div>');
+    var ls = L.laundryStatus(D.laundry, n);
+    if (ls.active) out.push('<button class="banner info" data-a="go" data-v="laundry"><span>洗濯：' + esc(ls.label) + '</span><b>洗濯の画面へ</b></button>');
+    if (sn.current) {
+      var c = sn.current;
+      out.push('<section class="card now ' + period(c.id) + '"><div class="stack">' +
+        '<span class="label">今すること・' + periodLabel(c.id) + '</span>' +
+        '<h1 class="display">' + esc(c.title) + '</h1>' +
+        '<p class="lead">' + esc(c.guidance) + '</p>' +
+        '<p class="muted num" style="font-size:18px">' + timeHint(c) + '</p>' +
+        nowActions(c) +
+        (V.confirmSkip === c.id
+          ? '<div class="banner"><span>「' + esc(c.title) + '」を今日は省略しますか？ 省略しても明日の量は増えません。</span><button class="btn danger" data-a="skip" data-v="' + c.id + '">省略する</button><button class="btn" data-a="cancelSkip">やめる</button></div>'
+          : (act[c.id] ? '' : '<div class="row"><button class="btn" data-a="later" data-v="' + c.id + '">あとで（' + S().laterMinutes + '分）</button><button class="btn" data-a="askSkip" data-v="' + c.id + '">今日は省略</button></div>')) +
+        '</div></section>');
+    } else {
+      out.push('<section class="card"><span class="label">今すること</span><h2 class="display" style="font-size:clamp(26px,5vw,38px)">' + esc(sn.idle) + '</h2></section>');
+    }
+    if (sn.next) {
+      var nt = sn.next.rec.laterUntil && sn.next.rec.laterUntil > n ? sn.next.rec.laterUntil : Math.max(sn.next.available, n);
+      out.push('<section class="card next"><div><span class="label">次にすること</span><h2>' + esc(sn.next.title) + '</h2></div><span class="t">' + L.fmtTime(nt) + '</span></section>');
+    }
+    out.push(todayCard(sn, n));
+    out.push(scheduleCard());
+    return '<div class="stack" style="margin-top:16px">' + out.join('') + '</div>';
+  }
+
+  function scheduleCard() {
+    var list = L.scheduleFor(now(), S(), D);
+    return '<details class="card"><summary>本番アプリが今日このあと知らせるもの（' + list.length + '件）</summary>' +
+      '<p class="small muted">試用版では鳴りません。iPad アプリでは、アラームは AlarmKit、それ以外はローカル通知で知らせます。</p>' +
+      (list.length ? '<div class="list">' + list.map(function (x) {
+        return '<div class="li"><span class="time">' + L.fmtTime(x.at) + '</span><span class="body">' + esc(x.title) + '<br><span class="small muted">' + esc(x.body) + '</span></span><span class="end chip' + (x.channel === 'alarm' ? ' alarm' : '') + '">' + (x.channel === 'alarm' ? 'アラーム' : '通知') + '</span></div>';
+      }).join('') + '</div>' : '<p class="muted">今日はこのあと知らせるものはありません。</p>') + '</details>';
+  }
+
+  function staleCard(x) {
+    var sug = Math.min(L.suggestedEnd(x, S()), now());
+    return '<section class="card" style="border-color:var(--warn)"><div class="stack">' +
+      '<span class="label" style="color:var(--warn)">計測の確認</span>' +
+      '<h3>' + esc(L.SLOT[x.slot]) + '「' + esc(x.subject || '科目なし') + '」の計測が、' + L.fmtTime(x.startedAt) + 'から続いたままです</h3>' +
+      '<p class="muted">放置した時間を勉強時間として記録しないよう、実際に終えた時刻を選んでください。</p>' +
+      '<div class="field"><label for="stale-time">終えた時刻（' + L.shortLabel(x.day) + '）</label><input type="time" id="stale-time" value="' + t5(L.todOf(sug)) + '"></div>' +
+      '<div class="row"><button class="btn primary" data-a="staleConfirm" data-id="' + x.id + '">この時刻で確定する</button></div>' +
+      '<div class="row"><button class="btn" data-a="staleSnooze">まだ続けている</button><button class="btn danger" data-a="staleDelete" data-id="' + x.id + '">この記録を消す</button></div>' +
+      '</div></section>';
+  }
+
+  function curtainView() {
+    var ds = dayState(today()), r = L.rec(ds, 'wake');
+    var h = '<div class="stack" style="margin-top:16px"><h1 class="display">カーテンを開けよう</h1>';
+    if (r.status !== 'pending') {
+      h += '<div class="banner ok"><span>' + (r.status === 'done' ? 'カーテンを開けました' + (r.at ? '（' + L.fmtTime(r.at) + '）' : '') : '今日は省略しました') + '</span></div><button class="btn primary" data-a="go" data-v="meditation">瞑想へ</button>';
+    } else {
+      h += '<p class="lead">起きたら、まずカーテンを開けて部屋を明るくしよう。開けたら下のボタンを押します。</p>' +
+        '<button class="btn primary" data-a="curtain" style="background:var(--dawn)">カーテンを開けた</button>' +
+        '<p class="muted">暗い朝やカメラを使わないときも、このボタンで進めます。</p>' +
+        '<div class="card"><div class="stack"><h3>本番アプリでは</h3><p class="small">6:00 のアラームの「カーテンへ」でこの画面が開きます。「カーテンを開けた」を押すまで3分おきに鳴らし直し、ホームかこの画面を開いている間はアプリもチャイムを鳴らします。押すと鳴っているアラームを止め、残りの鳴らし直しを取り消します。</p>' +
+        '<button class="btn" data-a="chime">' + (chimeTimer ? 'チャイムを止める' : 'チャイムを鳴らしてみる') + '</button>' +
+        '<p class="small muted">カメラで明るさの目安を見る機能は、iPad アプリの試験機能です（このページでは使えません）。</p></div></div>';
+    }
+    return h + backBtn() + '</div>';
+  }
+
+  function meditationView() {
+    var ds = dayState(today()), st = L.rec(ds, 'meditation').status, m = ds.meditation;
+    var h = '<div class="stack" style="margin-top:16px"><h1 class="display">寝た姿勢で瞑想</h1>';
+    if (st !== 'pending') {
+      h += '<div class="banner ok"><span>' + (st === 'done' ? '瞑想おわり。身支度へ' : '今日は省略しました。身支度へ') + '</span></div><button class="btn primary" data-a="go" data-v="checklist.dressing">身支度へ</button>';
+    } else {
+      h += meditationControls();
+      if (!(m && m.endedAt == null)) h += '<button class="btn" data-a="medSkip">今日は省略して身支度へ</button>';
+      h += '<p class="small muted">本番アプリでは、終了時刻に音を止めて終了のアラームを鳴らします。このページの音は、ページを開いている間だけ鳴ります。</p>';
+    }
+    return h + backBtn() + '</div>';
+  }
+
+  function checklistView(id) {
+    var info = L.INFO[id], r = L.rec(dayState(today()), id);
+    var h = '<div class="stack" style="margin-top:16px"><h1 class="display">' + esc(info.title) + '</h1><p class="lead">' + esc(info.guidance) + '</p>' + checklistItems(id);
+    if (r.status === 'done') {
+      var msg = id === 'nightSetup' ? '準備できた。ここからは自由時間です' : id === 'tomorrowPrep' ? '準備できた。電子機器を閉じて、歯磨きや紙の読書で過ごそう' : id === 'homecoming' ? '着替えた。ジムに着いたら「運動開始」' : '完了しました';
+      h += '<div class="banner ok"><span>' + msg + '</span></div>';
+      if (id === 'dressing') h += '<button class="btn primary" data-a="go" data-v="study.morning1">朝の勉強①へ</button>';
+      if (id === 'homecoming') h += '<button class="btn primary" data-a="go" data-v="workout">運動の画面へ</button>';
+    } else if (r.status === 'skipped') h += '<div class="banner"><span>今日は省略しました</span></div>';
+    return h + backBtn() + '</div>';
+  }
+
+  function simpleView(id) {
+    var info = L.INFO[id], r = L.rec(dayState(today()), id), z = zumbaVideo();
+    var h = '<div class="stack" style="margin-top:16px"><h1 class="display">' + esc(info.title) + '</h1><p class="lead">' + esc(info.guidance) + '</p>';
+    if (id === 'zumba') h += z ? '<a class="btn" href="' + esc(z.url) + '" target="_blank" rel="noopener">ZUMBAの動画を開く</a>' : '<p class="muted small">ZUMBA の動画は未登録です（設定で登録）。</p>';
+    if (r.status === 'pending') h += '<button class="btn primary" data-a="done" data-v="' + id + '">完了</button><button class="btn" data-a="skip" data-v="' + id + '">今日は省略</button>';
+    else {
+      h += '<div class="banner ok"><span>' + (r.status === 'done' ? '完了しました' : '今日は省略しました') + '</span></div>';
+      if (id === 'zumba') h += '<button class="btn primary" data-a="go" data-v="oneMinute">机に座って1分だけ勉強</button>';
+    }
+    return h + backBtn() + '</div>';
+  }
+
+  function studyView(slot) {
+    var s = S(), t = today(), x = openSession(slot), n = now();
+    var title = slot === 'night' ? '夜の演習' : slot === 'other' ? '勉強' : '勉強（' + L.SLOT[slot] + '）';
+    var h = '<div class="stack" style="margin-top:16px"><h1 class="display">' + title + '</h1>', dl = null;
+    function rem(ms) { var r = ms - n; return r > 0 ? 'あと' + L.fmtMin(r / 1000) : '時刻を過ぎています'; }
+    if (slot === 'morning1') { var b = L.dateAt(t, s.steps.breakfast.time); dl = s.study.min + '〜' + s.study.max + '分。朝食（' + L.fmtTime(b) + '）まで' + rem(b); }
+    if (slot === 'morning2') { var d = L.dateAt(t, s.steps.departure.time) - s.departureWarn * MIN; dl = s.study.min + '〜' + s.study.max + '分。出発の準備（' + L.fmtTime(d) + '）まで' + rem(d); }
+    if (slot === 'night') { var w = L.dateAt(t, s.steps.nightStudy.time + s.steps.nightStudy.dur), c = L.dateAt(t, s.steps.tomorrowPrep.time); dl = '終了処理 ' + L.fmtTime(w) + '（' + rem(w) + '）／' + L.fmtTime(c) + 'には閉じる'; }
+    if (dl) h += '<p class="muted num" style="font-size:18px">' + dl + '</p>';
+    if (x) h += '<section class="card now ' + (slot === 'night' || slot === 'afterZumba' ? 'period-night' : 'period-morning') + '"><div class="stack">' + studyControls(slot, false) + '</div></section>';
+    else {
+      var tot = L.dayTotals(t, D.sessions).bySlot[slot];
+      if (tot) h += '<div class="banner ok"><span>今日の' + L.SLOT[slot] + 'は記録済み（' + L.fmtMin(tot) + '）</span></div>';
+      h += studyControls(slot, false);
+    }
+    return h + backBtn() + '</div>';
+  }
+
+  function oneMinuteView() {
+    var x = openSession('afterZumba'), ls = L.laundryStatus(D.laundry, now()), target = S().study.oneMinute, sel = selectedSubject();
+    var h = '<div class="stack" style="margin-top:16px">';
+    if (ls.active && !V.oneLaundryLater && !x) {
+      h += '<section class="card"><div class="stack"><h3>洗濯：' + esc(ls.label) + '</h3>' +
+        (ls.kind === 'washing' ? '<p class="muted">終了予定の時刻になったら知らせます。先に勉強して大丈夫です。</p>' : '<p>終わっていたら干して、「干した」を押そう。まだなら、あとでもう一度知らせます。</p>') +
+        '<div class="row"><button class="btn" data-a="lHung">干した</button>' +
+        (ls.kind === 'dueToCheck' || ls.kind === 'leftover' ? '<button class="btn" data-a="lNotYet">まだ（' + S().laundry.reNotify + '分後）</button>' : '') +
+        '<button class="btn ghost" data-a="oneLaundryLater">先に勉強する</button></div></div></section>';
+    }
+    h += '<h1 class="display">まず机に座ろう</h1>';
+    var done = D.sessions.filter(function (s) { return s.day === today() && s.slot === 'afterZumba' && s.endedAt != null; }).sort(function (a, b) { return b.startedAt - a.startedAt; })[0];
+    if (x) {
+      var el = L.activeSec(x, now()), reached = el >= target;
+      if (reached && !V.oneCont) {
+        h += '<div class="banner ok" style="padding:20px"><span style="font-size:clamp(22px,4vw,30px);font-weight:700">' + esc(L.praise(today())) + '</span></div>' +
+          '<p>ここで終えても成功です。</p>' +
+          '<button class="btn go primary" data-a="oneFinish" data-id="' + x.id + '">ここで終える</button><button class="btn" data-a="oneCont">続ける</button>';
+      } else {
+        h += '<section class="card now period-night"><div class="stack"><h2>' + esc(x.subject || '科目なし') + '</h2>' +
+          '<div class="big-num" data-one="' + x.id + '" data-target="' + target + '">' + L.fmtClock(reached ? el : target - el) + '</div>' +
+          '<span class="muted">' + (reached ? '続けています' : 'あと少し') + '</span></div></section>' +
+          '<button class="btn danger" data-a="oneFinish" data-id="' + x.id + '">終える</button>';
+      }
+    } else if (done) {
+      var sec = L.activeSec(done, done.endedAt);
+      h += '<div class="banner ok" style="padding:20px"><span style="font-size:clamp(20px,4vw,28px);font-weight:700">' + (sec >= target ? esc(L.praise(today())) : '記録しました。机に戻れたね') + '</span></div>' +
+        '<p class="lead">続けて、21時の問題・答案用紙・電卓・ペンを用意し、最初の問題を開いておこう。準備したら自由時間です。</p>' +
+        '<button class="btn primary" data-a="go" data-v="checklist.nightSetup">21時の準備へ</button>';
+    } else {
+      if (D.subjects.length) h += '<div class="subjects">' + D.subjects.map(function (s) { return '<button class="btn' + (s === sel ? ' sel' : '') + '" data-a="subject" data-v="' + esc(s) + '">' + esc(s) + '</button>'; }).join('') + '</div>';
+      h += '<button class="btn primary go" data-a="oneStart">1分だけ勉強を始める</button>';
+    }
+    return h + backBtn() + '</div>';
+  }
+
+  function workoutRows(p) {
+    var out = [];
+    p.segments.forEach(function (g) {
+      var key = g.kind === 'switchVideo' ? g.id : g.blockID, last = out[out.length - 1];
+      if (last && last.id === key) last.end = g.end;
+      else out.push({ id: key, title: ['jog', 'fast', 'slow', 'walk'].indexOf(g.kind) >= 0 ? 'ランニング（インターバル' + (p.setsPlanned || 0) + 'セット）' : g.title, start: g.start, end: g.end });
+    });
+    return out;
+  }
+  function planList(p, n) {
+    return '<div class="list">' + workoutRows(p).map(function (r) {
+      var cls = r.end <= n ? ' past' : (r.start <= n && n < r.end ? ' now-row' : '');
+      return '<div class="li' + cls + '"><span class="time">' + L.fmtTime(r.start) + '</span><span class="body">' + esc(r.title) + '</span><span class="end num muted">' + L.fmtMin((r.end - r.start) / 1000) + '</span></div>';
+    }).join('') + '</div>' + (p.notes.length ? '<ul class="small muted" style="margin:10px 0 0;padding-left:20px">' + p.notes.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '');
+  }
+
+  function workoutView() {
+    var t = today(), n = now(), s = S(), ds = dayState(t), w = ds.workout, wd = L.weekday(t), plan = s.workout.days[wd] || { type: 'rest' };
+    var stepOn = s.steps.workout.days.indexOf(wd) >= 0, end = L.dateAt(t, s.workout.end);
+    var h = '<div class="stack" style="margin-top:16px"><h1 class="display">運動</h1><p class="muted">' + L.dayLabel(t) + '：' + L.DAY_TYPE[plan.type] + '</p>';
+    if (plan.type === 'rest' || !stepOn) return h + '<section class="card"><h2>今日は休みです</h2></section></div>';
+    if (!w) {
+      if (n >= end) return h + '<section class="card"><h2>終了時刻（' + L.fmtTime(end) + '）を過ぎています。今日はここまでにしよう</h2></section></div>';
+      var pv = L.startWorkout(t, n, s);
+      return h + '<p class="lead">ジムに着いたら押してください。今から ' + L.fmtTime(end) + ' までに収まるプランを作ります。</p>' +
+        '<button class="btn primary go" data-a="wStart">運動開始</button>' +
+        '<section class="card"><span class="label">今から始めた場合</span>' + planList(pv.plan, n) + '</section></div>';
+    }
+    if (L.isFinished(w)) {
+      return h + '<section class="card"><div class="stack"><h2>運動おわり（' + L.fmtTime(w.finishedAt) + '）</h2>' +
+        L.workoutSummary(w).map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('') + '</div></section>' +
+        '<button class="btn primary" data-a="go" data-v="laundry">洗濯かごの確認へ</button></div>';
+    }
+    h += '<p class="num" style="font-size:20px;font-weight:700">' + L.fmtTime(end) + 'まで あと' + L.fmtMin((end - n) / 1000) + '</p>';
+    if (L.isPaused(w)) {
+      h += '<section class="card"><h2>一時停止中</h2><p style="margin-top:6px">再開すると、残り時間で ' + L.fmtTime(end) + ' までに収まるよう作り直します。</p></section>' +
+        '<button class="btn primary go" data-a="wResume">再開</button><button class="btn" data-a="wSkip">止めた種目をやらない（スキップ）</button>';
+    } else {
+      var g = L.currentSeg(w, n), nx = L.nextBlockSeg(w, n);
+      if (g) {
+        h += '<section class="card now ' + (g.high ? 'period-evening' : 'period-night') + '"><div class="stack"><span class="label">いまの種目</span><h2 class="display" style="font-size:clamp(30px,5.5vw,44px)">' + esc(g.title) + '</h2>' +
+          (g.detail ? '<p>' + esc(g.detail) + '</p>' : '') +
+          '<div class="big-num" data-cd="' + g.end + '">' + L.fmtClock((g.end - n) / 1000) + '</div></div></section>';
+        if (g.url) h += '<a class="btn primary" style="background:var(--dusk)" href="' + esc(g.url) + '" target="_blank" rel="noopener">動画を開く</a>';
+        if (nx) h += '<p class="lead">次：' + esc(nx.title) + '（' + L.fmtTime(nx.start) + '〜）</p>';
+        h += '<div class="row"><button class="btn" data-a="wPause">一時停止</button><button class="btn" data-a="wNext">次へ</button><button class="btn" data-a="wSkip">スキップ</button></div>';
+      }
+    }
+    if (w.plan) h += '<section class="card"><span class="label">プラン（' + L.fmtTime(w.plan.createdAt) + 'に作成）</span>' + planList(w.plan, n) + '</section>';
+    h += V.confirm === 'wEnd'
+      ? '<div class="banner"><span>運動を終えますか？</span><button class="btn danger" data-a="wEnd">運動を終える</button><button class="btn" data-a="cancelConfirm">続ける</button></div>'
+      : '<button class="btn danger" data-a="wEndAsk">運動を終える</button>';
+    return h + '</div>';
+  }
+
+  function laundryView() {
+    var ls = L.laundryStatus(D.laundry, now()), s = S(), h = '<div class="stack" style="margin-top:16px"><h1 class="display">洗濯</h1>';
+    h += '<section class="card"' + (ls.active ? ' style="background:color-mix(in srgb,var(--accent) 12%,var(--surface))"' : '') + '><h2>' + esc(ls.label) + '</h2></section>';
+    var toBath = function () {
+      var ds = dayState(today());
+      if (L.finished(ds, 'bath') || s.steps.bath.days.indexOf(L.weekday(today())) < 0) return '';
+      return '<section class="card"><div class="stack"><h3>次は入浴へ</h3><p>' + L.todText(s.steps.bath.time + s.steps.bath.dur) + '頃に出て、' + L.todText(s.steps.dinner.time) + 'から夕食が目安です。洗濯で数分ずれても大丈夫。</p><button class="btn" data-a="go" data-v="step.bath">入浴の画面へ</button></div></section>';
+    };
+    if (ls.kind === 'notChecked') {
+      if (!V.laundryFull) h += '<h2 class="display" style="font-size:clamp(26px,5vw,36px)">洗濯かごはいっぱい？</h2><button class="btn primary" data-a="lFull">いっぱい</button><button class="btn" data-a="lSkip">いっぱいではない（今日は洗濯しない）</button>';
+      else h += '<p class="lead">運動で汗をかいた服も合わせて洗濯機へ入れて、運転を始めよう。運転を始めたら下のボタンを押します。</p><button class="btn primary" data-a="lStart">洗濯開始</button><button class="btn" data-a="lSkip">やめる（今日は洗濯しない）</button>';
+    } else if (ls.kind === 'washing') {
+      h += '<p class="lead">終了予定 ' + L.fmtTime(D.laundry.expectedEnd) + '。その頃に知らせます（本番アプリ）。</p>' + toBath() + '<button class="btn" data-a="lHung">干した</button>';
+    } else if (ls.kind === 'dueToCheck' || ls.kind === 'waitingRecheck') {
+      h += '<p class="lead">終わっているか確認しよう。干したら「干した」を押します。</p><button class="btn primary" data-a="lHung">干した</button><button class="btn" data-a="lNotYet">まだ（' + s.laundry.reNotify + '分後にもう一度）</button>';
+    } else if (ls.kind === 'hung') {
+      h += '<p>おつかれさま。</p>';
+    } else if (ls.kind === 'notWashing') {
+      h += toBath() + '<button class="btn" data-a="lClose" data-v="again">やっぱり洗濯する</button>';
+    } else if (ls.kind === 'leftover') {
+      h += '<p>前の日に「洗濯開始」を押したままです。干したなら「干した」、分からなければ記録を閉じてください。</p><button class="btn primary" data-a="lHung">干した</button><button class="btn" data-a="lClose">記録を閉じる</button>';
+    }
+    return h + '<p class="small muted">洗濯の予定所要時間：' + s.laundry.duration + '分（設定で変えられます）。洗濯機とはつながっていないので、終了は時間からの予定です。</p>' + backBtn() + '</div>';
+  }
+
+  function flowView() {
+    var key = L.addDays(today(), V.flowOffset), ds = dayState(key), s = S(), n = now();
+    var steps = L.resolve(key, s, ds), tot = L.dayTotals(key, D.sessions);
+    var cur = V.flowOffset === 0 ? (snap().current || {}).id : null;
+    var h = '<div class="stack" style="margin-top:16px"><div class="row" style="align-items:center"><button class="btn" style="flex:0 0 auto" data-a="flowDay" data-v="-1" aria-label="前の日">←</button>' +
+      '<h2 style="text-align:center">' + L.dayLabel(key) + '</h2><button class="btn" style="flex:0 0 auto" data-a="flowDay" data-v="1" aria-label="次の日"' + (V.flowOffset >= 0 ? ' disabled' : '') + '>→</button></div>';
+    if (tot.total > 0) h += '<p>勉強 合計' + L.fmtMin(tot.total) + '（朝' + L.fmtMin(tot.morning) + '）</p>';
+    h += '<section class="card"><span class="label">予定と実績（行を押すと訂正できます）</span><div class="list">';
+    steps.forEach(function (st) {
+      var r = st.rec, extra = '';
+      if (st.id === 'wake' && r.method) extra = r.method;
+      if (st.id === 'meditation' && ds.meditation) extra = L.fmtTime(ds.meditation.startedAt) + '〜' + L.fmtTime(ds.meditation.endedAt || ds.meditation.plannedEnd) + (ds.meditation.extended ? '（延長）' : '');
+      var slotOf = { morningStudy1: 'morning1', morningStudy2: 'morning2', afterZumba: 'afterZumba', nightStudy: 'night' }[st.id];
+      if (slotOf && tot.bySlot[slotOf]) extra = '勉強 ' + L.fmtMin(tot.bySlot[slotOf]);
+      if (st.id === 'workout' && ds.workout) extra = L.workoutSummary(ds.workout).join('・');
+      if (st.id === 'laundryCheck' && r.method) extra = r.method;
+      h += '<button class="li" data-a="flowEdit" data-v="' + st.id + '" aria-expanded="' + (V.flowEdit === st.id) + '"><span class="time">' + L.todText(st.setting.time) + '</span><span class="body">' + esc(st.title) + (extra ? '<br><span class="small muted">' + esc(extra) + '</span>' : '') + '</span><span class="end">' + phaseChip(st, cur, n) + '</span></button>';
+      if (V.flowEdit === st.id) {
+        h += '<div class="row" style="padding:10px 0">' +
+          (r.status !== 'done' ? '<button class="btn" data-a="flowSet" data-id="' + st.id + '" data-v="done">完了にする</button>' : '') +
+          (r.status !== 'skipped' ? '<button class="btn" data-a="flowSet" data-id="' + st.id + '" data-v="skip">省略にする</button>' : '') +
+          (r.status !== 'pending' ? '<button class="btn danger" data-a="flowSet" data-id="' + st.id + '" data-v="reopen">未実施に戻す</button>' : '') + '</div>';
+      }
+    });
+    h += '</div></section>';
+    if (V.flowOffset === 0) h += scheduleCard();
+    if (ds.events.length) {
+      h += '<details class="card"><summary>この日の記録（' + ds.events.length + '件）</summary><div class="list">' + ds.events.slice(-40).reverse().map(function (e) {
+        return '<div class="li"><span class="time">' + L.fmtTime(e.at) + '</span><span class="body">' + esc(e.text) + '</span></div>';
+      }).join('') + '</div></details>';
+    }
+    return h + '</div>';
+  }
+
+  function studyCSV() {
+    var rows = [['日付', '曜日', '区分', '科目', '開始', '終了', '勉強時間（分）', 'やった内容', '教材', 'ページ', '次回の続き', '間違いメモ']];
+    D.sessions.slice().sort(function (a, b) { return a.startedAt - b.startedAt; }).forEach(function (x) {
+      rows.push([x.day, L.WD[L.weekday(x.day)], L.SLOT[x.slot], x.subject, L.fmtTime(x.startedAt), x.endedAt ? L.fmtTime(x.endedAt) : '',
+        x.endedAt ? (L.activeSec(x, x.endedAt) / 60).toFixed(1) : '計測中', x.content, x.material, x.pages, x.nextNote, x.mistakeNote]);
+    });
+    return rows.map(function (r) { return r.map(function (c) { c = String(c == null ? '' : c); return /[",\n\r]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(','); }).join('\r\n');
+  }
+
+  function studyRecordsView() {
+    var t = today(), tot = L.dayTotals(t, D.sessions), wk = L.weekTotals(t, D.sessions), max = Math.max(60, Math.max.apply(null, wk.map(function (x) { return x.sec; })));
+    var subj = L.bySubject(L.weekStart(t), L.addDays(L.weekStart(t), 6), D.sessions);
+    var h = '<div class="stack" style="margin-top:16px"><h1 class="display">勉強記録</h1><section class="card"><span class="label">今日</span><div class="list">';
+    ['morning1', 'morning2', 'afterZumba', 'night'].forEach(function (k) { h += '<div class="li"><span class="body">' + L.SLOT[k] + '</span><span class="end num">' + L.fmtMin(tot.bySlot[k] || 0) + '</span></div>'; });
+    h += '<div class="li"><span class="body muted">朝の合計（①＋②）</span><span class="end num">' + L.fmtMin(tot.morning) + '</span></div><div class="li"><b class="body">今日の合計</b><b class="end num">' + L.fmtMin(tot.total) + '</b></div></div></section>';
+    h += '<section class="card"><span class="label">今週（月〜日）</span><div class="list bars">' + wk.map(function (x) {
+      return '<div class="li"><span class="time" style="width:72px">' + L.shortLabel(x.day) + '（' + L.WD[L.weekday(x.day)] + '）</span><span class="track"><div class="bar" style="width:' + Math.max(1, Math.round(x.sec / max * 100)) + '%"></div></span><span class="end num" style="width:72px;text-align:right">' + L.fmtMin(x.sec) + '</span></div>';
+    }).join('') + '<div class="li"><b class="body">週の合計</b><b class="end num">' + L.fmtMin(wk.reduce(function (a, x) { return a + x.sec; }, 0)) + '</b></div></div></section>';
+    if (subj.length) h += '<section class="card"><span class="label">科目別（今週）</span><div class="list">' + subj.map(function (x) { return '<div class="li"><span class="body">' + esc(x.name) + '</span><span class="end num">' + L.fmtMin(x.sec) + '</span></div>'; }).join('') + '</div></section>';
+    var list = D.sessions.slice().sort(function (a, b) { return b.startedAt - a.startedAt; }).slice(0, 60);
+    h += '<section class="card"><span class="label">記録（新しい順・押すと訂正）</span>';
+    h += list.length ? '<div class="list">' + list.map(function (x) {
+      return '<button class="li" data-a="editSession" data-id="' + x.id + '"><span class="time" style="width:auto">' + L.shortLabel(x.day) + ' ' + L.SLOT[x.slot] + '</span><span class="body"><b>' + esc(x.subject || '科目なし') + '</b>' + (x.content ? '<br><span class="small">' + esc(x.content) + '</span>' : '') + (x.nextNote ? '<br><span class="small muted">続き：' + esc(x.nextNote) + '</span>' : '') + '</span><span class="end num">' + (x.endedAt ? L.fmtMin(L.activeSec(x, x.endedAt)) : '計測中') + '</span></button>';
+    }).join('') + '</div>' : '<p class="muted">まだ記録はありません。ホームの「開始」か、下のボタンから始めると、ここに朝①・朝②・ZUMBA後・夜の演習に分けて並びます。</p>';
+    h += '<div class="row" style="margin-top:12px"><button class="btn" data-a="go" data-v="study.other">その他の勉強を始める</button><button class="btn" data-a="copyCSV">CSVをコピー</button></div></section></div>';
+    return h;
+  }
+
+  function settingsView() {
+    var s = S(), h = '<div class="stack" style="margin-top:16px"><h1 class="display">設定</h1>';
+    h += '<button class="banner info" data-a="go" data-v="status"><span>' + (SITE ? '通知の状況（この Web版と、別に作っている iPad アプリ）' : '本番アプリの状況と、通知・アラームの確認表') + '</span><b>開く</b></button>';
+    h += '<section class="card"><span class="label">生活の時刻（時刻・所要時間・曜日・知らせるか）</span>';
+    L.ORDER.forEach(function (id) {
+      var st = s.steps[id];
+      h += '<div class="set-row"><b>' + esc(L.INFO[id].title) + '</b><div class="set-grid">' +
+        '<div class="field"><label class="small muted" for="t-' + id + '">時刻</label><input type="time" id="t-' + id + '" value="' + t5(st.time) + '" data-s="steps.' + id + '.time" data-k="time"></div>' +
+        '<div class="field"><label class="small muted" for="d-' + id + '">所要時間（分）</label><input type="number" id="d-' + id + '" min="0" max="180" value="' + st.dur + '" data-s="steps.' + id + '.dur" data-k="int"></div>' +
+        '<label class="toggle"><input type="checkbox" id="n-' + id + '"' + (st.notify ? ' checked' : '') + ' data-s="steps.' + id + '.notify">知らせる</label>' +
+        (id === 'wake' || id === 'nightStudy' ? '<div class="field"><label class="small muted" for="c-' + id + '">知らせ方</label><select id="c-' + id + '" data-s="steps.' + id + '.channel"><option value="alarm"' + (st.channel === 'alarm' ? ' selected' : '') + '>アラーム</option><option value="notification"' + (st.channel === 'notification' ? ' selected' : '') + '>通知</option></select></div>' : '') +
+        '</div><div class="days" role="group" aria-label="曜日">' + [1, 2, 3, 4, 5, 6, 7].map(function (d) { return '<button class="' + (st.days.indexOf(d) >= 0 ? 'on' : '') + '" data-a="day" data-id="' + id + '" data-v="' + d + '" aria-pressed="' + (st.days.indexOf(d) >= 0) + '">' + L.WD[d] + '</button>'; }).join('') + '</div></div>';
+    });
+    h += '</section>';
+    h += '<section class="card"><span class="label">夜の演習の催促</span>';
+    s.nudges.forEach(function (n, i) {
+      h += '<div class="set-row"><div class="set-grid"><div class="field"><label class="small muted" for="nt-' + i + '">時刻</label><input type="time" id="nt-' + i + '" value="' + t5(n.time) + '" data-s="nudges.' + i + '.time" data-k="time"></div>' +
+        '<div class="field"><label class="small muted" for="nc-' + i + '">知らせ方</label><select id="nc-' + i + '" data-s="nudges.' + i + '.channel"><option value="notification"' + (n.channel === 'notification' ? ' selected' : '') + '>通知</option><option value="alarm"' + (n.channel === 'alarm' ? ' selected' : '') + '>アラーム</option></select></div>' +
+        '<label class="toggle"><input type="checkbox" id="ne-' + i + '"' + (n.enabled ? ' checked' : '') + ' data-s="nudges.' + i + '.enabled">使う</label></div>' +
+        '<div class="field"><label class="small muted" for="nx-' + i + '">文面</label><input type="text" id="nx-' + i + '" value="' + esc(n.text) + '" data-s="nudges.' + i + '.text"></div></div>';
+    });
+    h += '</section>';
+    h += '<section class="card"><span class="label">そのほか</span><div class="set-grid" style="margin-top:10px">' +
+      num('「あとで」（分）', 'laterMinutes', s.laterMinutes, 5, 60) + num('出発の何分前に知らせる', 'departureWarn', s.departureWarn, 0, 30) +
+      num('洗濯の予定所要時間（分）', 'laundry.duration', s.laundry.duration, 10, 180) + num('「まだ」のあと再通知（分）', 'laundry.reNotify', s.laundry.reNotify, 5, 60) +
+      num('瞑想の延長（分）', 'meditation.extend', s.meditation.extend, 3, 30) + num('起床の鳴らし直し 間隔（分）', 'wake.interval', s.wake.interval, 1, 10) +
+      num('起床の鳴らし直し 回数', 'wake.count', s.wake.count, 0, 10) + num('ZUMBA後の「少しだけ」（秒）', 'study.oneMinute', s.study.oneMinute, 30, 300) +
+      num('朝の勉強の目安 ここから（分）', 'study.min', s.study.min, 1, 30) + num('朝の勉強の目安 ここまで（分）', 'study.max', s.study.max, 5, 60) +
+      '</div></section>';
+    h += '<section class="card"><span class="label">運動（曜日ごと）</span>';
+    [1, 2, 3, 4, 5, 6, 7].forEach(function (d) {
+      var p = s.workout.days[d];
+      h += '<div class="set-row"><b>' + L.WD[d] + '曜日</b><div class="set-grid"><div class="field"><label class="small muted" for="wt-' + d + '">運動</label><select id="wt-' + d + '" data-s="workout.days.' + d + '.type">' +
+        Object.keys(L.DAY_TYPE).map(function (k) { return '<option value="' + k + '"' + (p.type === k ? ' selected' : '') + '>' + L.DAY_TYPE[k] + '</option>'; }).join('') + '</select></div>';
+      if (p.type !== 'run' && p.type !== 'rest') {
+        h += videoSelect('主運動の動画', 'workout.days.' + d + '.main', p.main, function (v) { return v.cat !== 'abs' && v.cat !== 'zumba'; }, 'wm-' + d) +
+          videoSelect('腹筋の動画', 'workout.days.' + d + '.abs', p.abs, function (v) { return v.cat === 'abs'; }, 'wa-' + d);
+      }
+      h += '</div></div>';
+    });
+    h += '<div class="set-grid" style="margin-top:10px"><div class="field"><label class="small muted" for="w-end">運動の終了時刻</label><input type="time" id="w-end" value="' + t5(s.workout.end) + '" data-s="workout.end" data-k="time"></div>' +
+      num('インターバル 基本セット', 'workout.interval.baseSets', s.workout.interval.baseSets, 1, 20) + num('遅い日の最低セット', 'workout.interval.minSets', s.workout.interval.minSets, 0, 20) + '</div></section>';
+    var zv = s.videos.filter(function (v) { return v.cat === 'zumba'; })[0];
+    h += '<section class="card"><span class="label">動画（実際の再生時間）</span><div class="list">' + s.videos.filter(function (v) { return v.cat !== 'zumba'; }).map(function (v) {
+      return '<div class="li"><span class="body"><a href="' + esc(v.url) + '" target="_blank" rel="noopener">' + esc(v.title) + '</a><br><span class="small muted">' + esc(L.CAT[v.cat]) + (v.titleMin ? '・タイトル上は' + v.titleMin + '分' : '') + (v.note ? '・' + esc(v.note) : '') + '</span></span><span class="end num">' + (v.sec ? Math.floor(v.sec / 60) + ':' + L.pad(v.sec % 60) : '未確認') + '</span></div>';
+    }).join('') + '</div><p class="small muted">長さは 2026-10-02 に YouTube の動画ページで確かめた実際の再生時間です。</p>' +
+      '<div class="field" style="margin-top:10px"><label for="zumba-url">ZUMBA の動画（URL を貼る）</label><input type="url" id="zumba-url" value="' + esc(zv ? zv.url : '') + '" placeholder="https://www.youtube.com/watch?v=…" data-s="zumbaUrl"></div></section>';
+    h += '<section class="card"><div class="stack"><span class="label">' + (SITE ? 'データ' : 'この試用版のデータ') + '</span><p class="small muted">' +
+      (SITE ? '記録と設定は、この端末のこのアプリの中だけに保存します。Safari で開いたときとホーム画面から開いたときでは、保存場所が別です。ときどきバックアップを取っておくと安心です。'
+        : '記録と設定はこのブラウザの中だけにあります。iPad アプリには引き継がれません。') + '</p>' +
+      '<div class="row"><button class="btn" data-a="backupCopy">バックアップをコピー</button><button class="btn" data-a="backupOpen">バックアップから戻す</button></div>' +
+      '<button class="btn" data-a="reload">読み込み直す（最新の版にする）</button>' +
+      (V.confirm === 'reset' ? '<div class="banner"><span>記録と設定をすべて消して、最初の状態に戻しますか？</span><button class="btn danger" data-a="reset">消す</button><button class="btn" data-a="cancelConfirm">やめる</button></div>' : '<button class="btn danger" data-a="askReset">記録と設定を消す</button>') + '</div></section>';
+    return h + '</div>';
+  }
+  function num(label, path, v, min, max) {
+    var id = 'p-' + path.replace(/\./g, '-');
+    return '<div class="field"><label class="small muted" for="' + id + '">' + label + '</label><input type="number" id="' + id + '" min="' + min + '" max="' + max + '" value="' + v + '" data-s="' + path + '" data-k="int"></div>';
+  }
+  function videoSelect(label, path, cur, filter, id) {
+    return '<div class="field"><label class="small muted" for="' + id + '">' + label + '</label><select id="' + id + '" data-s="' + path + '" data-k="null"><option value="">なし</option>' +
+      S().videos.filter(filter).map(function (v) { return '<option value="' + v.id + '"' + (v.id === cur ? ' selected' : '') + '>' + esc(L.CAT[v.cat] + '｜' + v.title.slice(0, 40)) + '</option>'; }).join('') + '</select></div>';
+  }
+
+  function statusView() {
+    var rows = [
+      ['画面ロック中', '資料：鳴る', '資料：表示される'], ['別のアプリを使用中', '資料：鳴る', '資料：表示される'],
+      ['通信なし', '端末内の予約なので不要のはず（資料に明記なし）', '同左'], ['アプリ終了後', '資料：鳴る', '資料：表示される'],
+      ['権限拒否', '予約できない。ホームに警告を出す', '同左'], ['予定変更後', '古い予約を取り消して入れ直す（テストは未実行）', '同左'],
+      ['端末の再起動後', '資料：一度ロックを解除するまで鳴らない', '残るかは資料でも未確認']
+    ];
+    var web = [
+      ['いまの状態', '閉じている間の通知・アラームは<b>鳴りません</b>（プッシュ通知は未設定）'],
+      ['開いている間', '案内・計測・運動プラン・洗濯・記録が使えます。一度開いたあとは、通信がなくても開けます'],
+      ['プッシュ通知を足す場合', 'iPadOS 16.4 以上で、ホーム画面に追加したアプリの中のボタンを押して許可します（Apple の資料）。決まった時刻に送るサーバーが別に必要です'],
+      ['通信がないとき', 'プッシュ通知は届きません'],
+      ['音', '通知音が1回です。止めるまで鳴り続けるアラームにはできません'],
+      ['集中モード・消音', '影響を受けます（資料：集中モードと連動）'],
+      ['確実に鳴らしたいもの', '起床などは、iPad の「時計」のアラームを使ってください'],
+      ['実機での確認', '<b>すべて未確認</b>']
+    ];
+    return '<div class="stack" style="margin-top:16px"><h1 class="display">状況</h1>' +
+      (SITE ? '<section class="card"><span class="label">この Web版（ホーム画面に追加して使う）の通知</span><div class="scroll"><table><tbody>' +
+        web.map(function (r) { return '<tr><th scope="row" style="white-space:nowrap">' + r[0] + '</th><td>' + r[1] + '</td></tr>'; }).join('') + '</tbody></table></div></section>' : '') +
+      '<section class="card"><span class="label">' + (SITE ? '別に作っている iPad アプリ（ネイティブ）' : '本番の iPad アプリ') + '（2026-10-05 時点）</span><div class="scroll"><table><thead><tr><th>内容</th><th>状態</th></tr></thead><tbody>' +
+      '<tr><td>計算部分（このページと同じ手順）</td><td>書いた。Swift のテスト70件は<b>未実行</b>。このページ用に移した同じ計算は、テストと同じ条件で値が一致</td></tr>' +
+      '<tr><td>画面・アラーム・通知・音</td><td>書いた。<b>まだコンパイルしていない</b></td></tr>' +
+      '<tr><td>iPad へのインストール</td><td><b>未実施</b>（Mac なし・無料 Apple ID）</td></tr>' +
+      '<tr><td>通知・アラームの実機確認</td><td><b>すべて未確認</b></td></tr></tbody></table></div></section>' +
+      '<section class="card"><span class="label">' + (SITE ? 'iPad アプリ（ネイティブ）の' : '') + '通知・アラームの確認表（実機はすべて未確認）</span><div class="scroll"><table><thead><tr><th>条件</th><th>アラーム（AlarmKit）</th><th>ローカル通知</th></tr></thead><tbody>' +
+      rows.map(function (r) { return '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td></tr>'; }).join('') + '</tbody></table></div></section>' +
+      '<section class="card"><div class="stack"><span class="label">iPad に入れるまで</span>' +
+      '<p>1. GitHub の Mac でビルドとテストをする（費用なし。まずコンパイルが通るかを確かめる）。</p>' +
+      '<p>2. iPad に入れる方法を選ぶ：Mac を借りる（無料の Apple ID だと7日ごとに入れ直し）／Apple Developer Program に登録して TestFlight で入れる（年額）／Windows 用の非公式ツール（自己判断。こちらでは試していません）。</p></div></section>' +
+      '<section class="card"><div class="stack"><span class="label">' + (SITE ? 'この Web版と iPad アプリ（ネイティブ）の違い' : 'この試用版と本番の違い') + '</span>' +
+      '<p>通知・アラームは鳴りません。「今日このあと知らせるもの」に、iPad アプリで予約する時刻だけを出しています。音（ノイズ・チャイム・合図）はページを開いている間だけ鳴ります。カメラの明るさ判定は使えません。「時刻を試す」で朝や夜の流れを今すぐ確かめられます。</p></div></section>' +
+      '<div class="back"><button class="btn ghost" data-a="settingsHome">← 設定へ</button></div></div>';
+  }
+
+  // 下から出る画面
+  function renderSheet() {
+    var el = document.getElementById('sheet'), sh = V.sheet;
+    if (!sh) { el.innerHTML = ''; return; }
+    var h = '';
+    if (sh.type === 'time') {
+      var ws = L.weekStart(L.dayKey(Date.now())), cur = today();
+      h = '<h2>時刻を試す</h2><p class="muted">時刻のボタンを押すと、その時刻にすぐ切り替わり、そこから時計が進みます。</p>' +
+        '<div class="field" style="margin-top:12px"><label for="tt-day">日</label><select id="tt-day">' + [0, 1, 2, 3, 4, 5, 6].map(function (i) { var d = L.addDays(ws, i); return '<option value="' + d + '"' + (d === cur ? ' selected' : '') + '>' + L.dayLabel(d) + '</option>'; }).join('') + '</select></div>' +
+        '<div class="subjects" style="margin-top:12px">' + ['5:58', '6:15', '6:31', '6:55', '17:35', '18:28', '19:39', '20:54', '21:24'].map(function (x) { return '<button class="btn" data-a="timePreset" data-v="' + x + '">' + x + '</button>'; }).join('') + '</div>' +
+        '<div class="row" style="margin-top:16px;align-items:end"><div class="field"><label for="tt-time">ほかの時刻</label><input type="time" id="tt-time" value="' + t5(L.todOf(now())) + '"></div><button class="btn" data-a="timeSet">この時刻にする</button></div>' +
+        '<div class="row" style="margin-top:10px"><button class="btn" data-a="timeReal">実際の時刻に戻す</button><button class="btn ghost" data-a="closeSheet">閉じる</button></div>';
+    } else if (sh.type === 'finish' || sh.type === 'edit') {
+      var x = findSession(sh.id);
+      if (!x) { V.sheet = null; el.innerHTML = ''; return; }
+      h = '<h2>' + (sh.type === 'finish' ? '記録' : '記録の訂正') + '</h2><p class="muted">' + L.SLOT[x.slot] + '・' + (x.endedAt ? L.fmtDur(L.activeSec(x, x.endedAt)) : '計測中') + '。書けるところだけで大丈夫です。</p><div class="stack" style="margin-top:12px">' +
+        (sh.type === 'edit' ? fieldT('subject', '科目', x.subject) : '') +
+        fieldA('content', 'やった内容', x.content, '例：仕訳 問1〜5') + fieldT('material', '教材', x.material) + fieldT('pages', 'ページ', x.pages, '例：p.40〜45') +
+        fieldA('nextNote', '次回の続き', x.nextNote, '例：p.45 問3から') + fieldA('mistakeNote', '間違いメモ', x.mistakeNote, '例：減価償却の月割りを忘れた') +
+        '<div class="row"><button class="btn primary" data-a="saveFinish" data-id="' + x.id + '">保存</button></div>' +
+        '<div class="row"><button class="btn ghost" data-a="closeSheet">' + (sh.type === 'finish' ? 'あとで書く' : '閉じる') + '</button>' +
+        (sh.type === 'edit' ? (sh.del ? '<button class="btn danger" data-a="deleteSession" data-id="' + x.id + '">本当に削除する</button>' : '<button class="btn danger" data-a="askDelete">この記録を削除</button>') : '') + '</div></div>';
+    } else if (sh.type === 'csv' || sh.type === 'text') {
+      h = '<h2>' + (sh.type === 'csv' ? 'CSV' : esc(sh.title)) + '</h2><p class="muted">コピーできなかったので、下の文字を選んでコピーしてください。</p><textarea id="csv-text" style="min-height:240px" readonly>' + esc(sh.text) + '</textarea><div class="row" style="margin-top:12px"><button class="btn" data-a="closeSheet">閉じる</button></div>';
+    } else if (sh.type === 'restore') {
+      h = '<h2>バックアップから戻す</h2><p class="muted">「バックアップをコピー」で写した文字を、下に貼り付けてください。今の記録と設定は、貼り付けた内容に置き換わります。</p>' +
+        (sh.error ? '<div class="banner" style="margin-top:10px"><span>' + esc(sh.error) + '</span></div>' : '') +
+        '<div class="field" style="margin-top:12px"><label for="restore-text">バックアップの文字</label><textarea id="restore-text" style="min-height:200px">' + esc(sh.text || '') + '</textarea></div>' +
+        '<div class="row" style="margin-top:12px"><button class="btn primary" data-a="backupRestore">この内容に置き換える</button></div>' +
+        '<div class="row" style="margin-top:10px"><button class="btn ghost" data-a="closeSheet">やめる</button></div>';
+    }
+    el.innerHTML = '<div class="sheet-bg"><div class="sheet" role="dialog" aria-modal="true">' + h + '</div></div>';
+  }
+  function fieldT(k, label, v, ph) { return '<div class="field"><label for="f-' + k + '">' + label + '</label><input type="text" id="f-' + k + '" value="' + esc(v) + '"' + (ph ? ' placeholder="' + ph + '"' : '') + '></div>'; }
+  function fieldA(k, label, v, ph) { return '<div class="field"><label for="f-' + k + '">' + label + '</label><textarea id="f-' + k + '" placeholder="' + ph + '">' + esc(v) + '</textarea></div>'; }
+
+  function mainView() {
+    if (V.tab === 'home') {
+      var r = V.route;
+      if (!r) return homeView();
+      if (r === 'curtain') return curtainView();
+      if (r === 'meditation') return meditationView();
+      if (r === 'oneMinute') return oneMinuteView();
+      if (r === 'laundry') return laundryView();
+      if (r.indexOf('checklist.') === 0) return checklistView(r.split('.')[1]);
+      if (r.indexOf('study.') === 0) return studyView(r.split('.')[1]);
+      if (r.indexOf('step.') === 0) return simpleView(r.split('.')[1]);
+      return homeView();
+    }
+    if (V.tab === 'flow') return flowView();
+    if (V.tab === 'study') return studyRecordsView();
+    if (V.tab === 'workout') return workoutView();
+    return V.route === 'status' ? statusView() : settingsView();
+  }
+
+  // 運動中・瞑想中・チャイム中は、画面が自動で消えないよう頼む（断られても動く）
+  var wakeLock = null;
+  function wantAwake() {
+    var ds = dayState(today()), w = ds.workout, m = ds.meditation;
+    return !!((w && !L.isFinished(w) && !L.isPaused(w)) || (m && m.endedAt == null && !L.finished(ds, 'meditation')) || chimeTimer);
+  }
+  function syncWake() {
+    try {
+      if (!('wakeLock' in navigator)) return;
+      if (wantAwake()) {
+        if (!wakeLock && document.visibilityState === 'visible') {
+          navigator.wakeLock.request('screen').then(function (l) {
+            wakeLock = l; l.addEventListener('release', function () { if (wakeLock === l) wakeLock = null; });
+          }).catch(function () {});
+        }
+      } else if (wakeLock) { var l = wakeLock; wakeLock = null; l.release().catch(function () {}); }
+    } catch (e) {}
+  }
+
+  var lastSig = '';
+  function render() {
+    renderTop();
+    document.getElementById('main').innerHTML = mainView();
+    renderSheet();
+    lastSig = signature();
+    syncWake();
+  }
+  // 画面に戻ってきたとき：止まっていた間の時刻を取り戻して描き直す
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible') return;
+    tick();
+    var a = document.activeElement, typing = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
+    if (!typing && !V.sheet) render();
+  });
+
+  // 1秒ごと：時計と残り時間だけ書き換える。表示が変わるときだけ全体を描き直す（押している途中のボタンを消さないため）
+  function signature() {
+    var t = today(), ds = dayState(t), sn = snap(), w = ds.workout, n = now(), one = openSession('afterZumba');
+    return [V.tab, V.route, Math.floor(n / MIN), sn.current && sn.current.id, sn.next && sn.next.id,
+      w ? (L.isFinished(w) ? 'f' : L.isPaused(w) ? 'p' : (L.currentSeg(w, n) || {}).id) : '-',
+      L.laundryStatus(D.laundry, n).kind, ds.meditation ? ds.meditation.endedAt : '-',
+      one ? (L.activeSec(one, n) >= S().study.oneMinute) : '-', (staleSession() || {}).id].join('|');
+  }
+  function tick() {
+    var n = now(), ds = dayState(today());
+    if (ds.workout && L.refreshWorkout(ds.workout, n)) { if (!L.finished(ds, 'workout')) L.complete(ds, 'workout', ds.workout.finishedAt); save(); }
+    if (ds.meditation && ds.meditation.endedAt == null && !L.finished(ds, 'meditation') && n >= ds.meditation.plannedEnd) { finishMeditation(true); if (AC) beep(true); }
+    var c = document.getElementById('clock'); if (c) c.innerHTML = clockText();
+    document.querySelectorAll('[data-cd]').forEach(function (e) { e.textContent = L.fmtClock((Number(e.dataset.cd) - n) / 1000); });
+    document.querySelectorAll('[data-el]').forEach(function (e) { var x = findSession(e.dataset.el); if (x) e.textContent = L.fmtClock(L.activeSec(x, n)); });
+    document.querySelectorAll('[data-one]').forEach(function (e) { var x = findSession(e.dataset.one), tg = Number(e.dataset.target); if (x) { var a = L.activeSec(x, n); e.textContent = L.fmtClock(a >= tg ? a : tg - a); } });
+    document.querySelectorAll('[data-prog]').forEach(function (e) {
+      var x = findSession(e.dataset.prog), p = x && progInfo(x, n); if (!p) return;
+      e.style.width = (p.ratio * 100).toFixed(1) + '%'; e.classList.toggle('reached', p.reached);
+    });
+    document.querySelectorAll('[data-progcap]').forEach(function (e) { var x = findSession(e.dataset.progcap), p = x && progInfo(x, n); if (p) e.textContent = p.cap; });
+    var sig = signature();
+    if (sig !== lastSig) {
+      var old = lastSig.split('|'), neu = sig.split('|');
+      if (old[5] !== neu[5] && neu[5] && neu[5].indexOf('#') > 0 && AC) {
+        var seg = ds.workout ? L.currentSeg(ds.workout, n) : null;
+        beep(!!(seg && seg.kind === 'fast'));
+      }
+      if (old[8] === 'false' && neu[8] === 'true' && AC) beep(false);
+      var a = document.activeElement, typing = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
+      if (!typing && !V.sheet) render(); else lastSig = sig;
+    }
+  }
+  render();
+  setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
