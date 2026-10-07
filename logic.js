@@ -635,6 +635,24 @@
     return out.sort(function (a, b) { return a.at - b.at; });
   }
 
+  // ---- Web版：サーバーに預ける通知（今日の残りと、その先の日の分。days 日ぶん） ----
+  // 先の日は「まだ何もしていない一日」として並べる。その日にアプリを開けば、押した内容に合わせて預け直す。
+  function pushItems(now, s, data, days) {
+    var out = [], seen = {}, first = dayKey(now);
+    for (var i = 0; i < days; i++) {
+      var day = addDays(first, i);
+      // 今日の洗濯の状態は、先の日には持ち越さない
+      var d = i === 0 ? data : Object.assign({}, data, { laundry: newLaundry() });
+      scheduleFor(i === 0 ? now : dayStart(day), s, d).forEach(function (x) {
+        var id = day + '.' + x.id;
+        if (seen[id]) return;
+        seen[id] = true;
+        out.push({ id: id, at: x.at, title: x.title, body: x.body });
+      });
+    }
+    return out.sort(function (a, b) { return a.at - b.at || (a.id < b.id ? -1 : 1); });
+  }
+
   var api = {
     MIN: MIN, pad: pad, parts: parts, dayKey: dayKey, dayStart: dayStart, addDays: addDays, weekday: weekday, WD: WD,
     tod: tod, todText: todText, parseTod: parseTod, todOf: todOf, dateAt: dateAt, fmtTime: fmtTime, dayLabel: dayLabel,
@@ -651,7 +669,7 @@
     dayTotals: dayTotals, weekTotals: weekTotals, bySubject: bySubject, continuation: continuation,
     newLaundry: newLaundry, laundryStart: laundryStart, laundrySkip: laundrySkip, laundryNotYet: laundryNotYet,
     laundryHang: laundryHang, laundryClose: laundryClose, laundryStatus: laundryStatus, laundryDecided: laundryDecided,
-    scheduleFor: scheduleFor
+    scheduleFor: scheduleFor, pushItems: pushItems
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.DayLogic = api;
 })(this);

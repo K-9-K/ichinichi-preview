@@ -23,6 +23,8 @@ img { max-width: 100%; }
 <script>
 // claude.ai の外に置いた版の印。ホーム画面に追加する案内などを出す
 window.__SITE__ = true;
+// 通知サーバーの場所と公開鍵（push-config.json に URL が入っているときだけ）
+window.__PUSH__ = {"url": "https://ichinichi-push.ichinichi-push.workers.dev", "key": "BGSJd5z2lGXYiWYv9_mKWn6VdNeNMpkVy0mwO89PO-kwzmBEqLM511Xi887m8pX2okuZlXB3bl_4YfOG1utzoy4"};
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
 }
@@ -222,7 +224,78 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
     return fresh();
   }
   var D = load();
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) { /* 保存できない環境でも動かす */ } }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) { /* 保存できない環境でも動かす */ } pushSoon(); }
+
+  // ---------- 通知（Web版のプッシュ通知） ----------
+  // PUSH = 通知サーバーの場所と公開鍵（外に置いた版だけに入る）。
+  // PS = この端末の通知の状態。記録とは別の場所に保存する（バックアップで別の端末へ移さないため）。
+  var PUSH = (SITE && window.__PUSH__ && window.__PUSH__.url && window.__PUSH__.key) ? window.__PUSH__ : null;
+  var PKEY = 'ichinichi-push-v1';
+  var PS = (function () {
+    try { var p = JSON.parse(localStorage.getItem(PKEY)); if (p && typeof p === 'object') return p; } catch (e) {}
+    return {};
+  })();
+  if (!PS.verified) PS.verified = { open: null, closed: null };
+  function savePush() { try { localStorage.setItem(PKEY, JSON.stringify(PS)); } catch (e) {} }
+  var PV = { busy: false, msg: null, help: false, server: null };
+  var IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  function pushSupported() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+  function pushPerm() { try { return Notification.permission; } catch (e) { return 'default'; } }
+  function pushOn() { return !!(PUSH && PS.on && PS.device && pushSupported() && pushPerm() === 'granted'); }
+  function newDeviceId() {
+    try { if (crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+    var a = new Uint8Array(16), s = '';
+    try { crypto.getRandomValues(a); } catch (e) { for (var i = 0; i < 16; i++) a[i] = Math.floor(Math.random() * 256); }
+    for (var k = 0; k < 16; k++) s += (a[k] < 16 ? '0' : '') + a[k].toString(16);
+    return s;
+  }
+  function keyBytes(text) {
+    var s = text.replace(/-/g, '+').replace(/_/g, '/'), bin = atob(s + '===='.slice(0, (4 - s.length % 4) % 4)), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function pushApi(path, body) {
+    return fetch(PUSH.url + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status)); return j; }); });
+  }
+  // 準備ができた通知の受け口。準備が終わらないときは待ち続けない
+  function pushReg() {
+    return Promise.race([navigator.serviceWorker.ready, new Promise(function (res, rej) { setTimeout(function () { rej(new Error('not-ready')); }, 8000); })]);
+  }
+  function pushSubscription() { return pushReg().then(function (reg) { return reg.pushManager.getSubscription(); }); }
+  function sigOf(text) { var h = 5381; for (var i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0; return text.length + ':' + h; }
+
+  // この先の通知をサーバーに預け直す。記録や設定を変えるたびに呼ぶ（中身が同じなら送らない）。
+  // 「時刻を試す」の間は預け直さない（実際の時刻の通知を崩さないため）。
+  var pushTimer = null, pushBusy = false, pushAgain = false, pushTried = 0;
+  function pushSoon() { if (!pushOn()) return; clearTimeout(pushTimer); pushTimer = setTimeout(function () { pushSync(false); }, 1500); }
+  function pushSync(force) {
+    if (!pushOn() || D.sim) return Promise.resolve(false);
+    if (pushBusy) { pushAgain = true; return Promise.resolve(false); }
+    pushBusy = true; pushTried = Date.now();
+    var hadErr = !!PS.err;
+    return pushSubscription().then(function (sub) {
+      if (!sub) { PS.on = false; PS.lost = true; savePush(); return true; }   // 端末側で通知が外されていた
+      var items = L.pushItems(Date.now(), S(), D, 7), sj = sub.toJSON();
+      var sig = sigOf(sj.endpoint + '|' + items.map(function (x) { return x.id + '@' + x.at + '/' + x.title + '/' + x.body; }).join('|'));
+      if (!force && !PS.err && sig === PS.sig && PS.okAt && Date.now() - PS.okAt < 6 * 3600e3) return false;
+      return pushApi('/api/sync', { device: PS.device, sub: sj, items: items }).then(function (j) {
+        PS.sig = sig; PS.okAt = Date.now(); PS.count = j.count; PS.next = j.next; PS.err = null; savePush(); return true;
+      });
+    }).catch(function (e) { PS.err = String((e && e.message) || e); savePush(); return true; })
+      .then(function (changed) {
+        pushBusy = false;
+        if (pushAgain) { pushAgain = false; pushSoon(); }
+        if (changed && (V.tab === 'settings' || hadErr !== !!PS.err || PS.lost)) softRender();
+        return changed;
+      });
+  }
+  window.addEventListener('online', function () { pushSync(false); });
+  function whenText(ms) { return (L.dayKey(ms) === L.dayKey(Date.now()) ? '' : L.shortLabel(L.dayKey(ms)) + ' ') + L.fmtTime(ms); }
+  function verifiedText() {
+    var v = PS.verified;
+    return 'アプリを開いている間：' + (v.open ? whenText(v.open) + ' に確認' : '<b>未確認</b>') + '<br>閉じている間・ロック中：' + (v.closed ? whenText(v.closed) + ' に確認' : '<b>未確認</b>');
+  }
 
   // ---------- 時刻（「時刻を試す」で動かせる） ----------
   function now() { return Date.now() + (D.sim ? D.sim.offset : 0); }
@@ -512,6 +585,59 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
     reset: function () { stopNoise(); setChime(false); D = fresh(); V.confirm = null; save(); render(); },
     installHide: function () { D.installHide = true; save(); render(); },
     reload: function () { try { location.reload(); } catch (e) {} },
+    // 通知を許可する。許可を求める画面は、ボタンを押したその場でしか出せない（iPad の決まり）
+    pushOn: function () {
+      if (!PUSH || !pushSupported() || PV.busy) return;
+      PV.busy = true; PV.msg = null; render();
+      new Promise(function (res, rej) {
+        try { var r = Notification.requestPermission(res); if (r && r.then) r.then(res, rej); } catch (e) { rej(e); }
+      }).then(function (perm) {
+        if (perm !== 'granted') throw new Error('denied');
+        return pushReg();
+      }).then(function (reg) {
+        return reg.pushManager.getSubscription().then(function (old) {
+          return old || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(PUSH.key) });
+        });
+      }).then(function () {
+        if (!PS.device) PS.device = newDeviceId();
+        PS.on = true; PS.lost = false; PS.err = null; savePush();
+        return pushSync(true);
+      }).catch(function (e) {
+        var m = (e && e.message) || '';
+        PV.msg = m === 'denied' ? '通知が許可されませんでした。' : m === 'not-ready' ? '準備が終わっていません。設定の「読み込み直す」を押してから、もう一度試してください。' : '通知を設定できませんでした（' + m + '）。';
+      }).then(function () { PV.busy = false; render(); });
+    },
+    pushOffAsk: function () { V.confirm = 'pushOff'; render(); },
+    // 通知をやめる：サーバーに預けたものを消し、この端末の届け先も外す
+    pushOff: function () {
+      var dev = PS.device;
+      PS.on = false; PS.sig = ''; PS.count = 0; PS.next = null; PS.err = null; PS.testAsk = false; savePush();
+      V.confirm = null; PV.server = null; render();
+      if (PUSH && dev) pushApi('/api/off', { device: dev }).catch(function () {});
+      try { pushSubscription().then(function (s) { if (s) return s.unsubscribe(); }).catch(function () {}); } catch (e) {}
+    },
+    // テスト通知。10秒後＝開いたまま確かめる用、60秒後＝閉じて・ロックして確かめる用
+    pushTest: function (b) {
+      if (!pushOn() || PV.busy) return;
+      var delay = Number(b.dataset.v) || 0;
+      PV.busy = true; PV.msg = null; PV.help = false; render();
+      pushSubscription().then(function (sub) {
+        return pushApi('/api/test', { device: PS.device, sub: sub ? sub.toJSON() : null, delaySec: delay });
+      }).then(function (j) { PS.testAt = j.at; PS.testKind = delay >= 30 ? 'closed' : 'open'; PS.testAsk = true; savePush(); })
+        .catch(function () { PV.msg = 'テスト通知を頼めませんでした。通信を確認して、もう一度試してください。'; })
+        .then(function () { PV.busy = false; render(); });
+    },
+    // 「届いた」と本人が押したときだけ、確認済みにする
+    pushGot: function (b) {
+      if (b.dataset.v === 'yes') { PS.verified[PS.testKind === 'closed' ? 'closed' : 'open'] = Date.now(); PV.help = false; }
+      else PV.help = true;
+      PS.testAsk = false; savePush(); render();
+    },
+    pushStatus: function () {
+      if (!PUSH || !PS.device) return;
+      fetch(PUSH.url + '/api/status?device=' + encodeURIComponent(PS.device)).then(function (r) { return r.json(); })
+        .then(function (j) { PV.server = j; }, function () { PV.server = { error: true }; }).then(render);
+    },
     // バックアップ：記録と設定をまるごと文字にして写す／貼り付けて戻す（Safari とホーム画面のアプリは保存場所が別なので、移すときにも使う）
     backupCopy: function (b) {
       var text = JSON.stringify({ app: 'ichinichi', savedAt: L.dayKey(Date.now()), data: Object.assign({}, D, { sim: null }) });
@@ -561,12 +687,15 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
     document.getElementById('top').innerHTML =
       '<span class="date">' + L.dayLabel(t) + '</span>' +
       (D.sim ? '<span class="chip cur">時刻を試しています</span>' : '') +
-      (D.noticeRead ? '<button class="chip" data-a="notice" aria-expanded="' + V.noticeOpen + '">' + (SITE ? 'Web版' : '試用版') + '・通知は鳴りません</button>' : '<span class="chip">' + (SITE ? 'Web版' : '試用版') + '</span>') +
+      (D.noticeRead ? '<button class="chip" data-a="notice" aria-expanded="' + V.noticeOpen + '">' + (!SITE ? '試用版・通知は鳴りません' : pushOn() ? 'Web版・通知オン' : PUSH ? 'Web版・通知オフ' : 'Web版・通知は鳴りません') + '</button>' : '<span class="chip">' + (SITE ? 'Web版' : '試用版') + '</span>') +
       '<button class="linkbtn" data-a="timeOpen">時刻を試す</button>' +
       '<span class="clock" id="clock">' + clockText() + '</span>';
-    var noticeText = SITE
-      ? '<b>Web版です。</b>開いている間の案内と記録ができます。<b>閉じている間の通知・アラームは鳴りません</b>（プッシュ通知は未設定）。起床などの目覚ましは、iPad の「時計」のアラームを使ってください。記録はこの端末の中だけに保存します。'
-      : '<b>試用版です。</b>画面と一日の流れを確かめるためのページで、<b>通知・アラームは鳴りません</b>。本番の iPad アプリ（AlarmKit とローカル通知を使う）はまだビルド前です。記録はこのブラウザの中だけに残り、消えることがあります。';
+    var clockNote = '起床など確実に鳴らしたいものは、iPad の「時計」のアラームも使ってください。記録はこの端末の中だけに保存します。';
+    var noticeText = !SITE
+      ? '<b>試用版です。</b>画面と一日の流れを確かめるためのページで、<b>通知・アラームは鳴りません</b>。本番の iPad アプリ（AlarmKit とローカル通知を使う）はまだビルド前です。記録はこのブラウザの中だけに残り、消えることがあります。'
+      : pushOn() ? '<b>Web版です。</b>閉じている間は<b>プッシュ通知</b>で知らせます。通信が必要で、音は1回です。集中モードや消音の間は鳴りません。' + clockNote
+      : PUSH ? '<b>Web版です。</b>開いている間の案内と記録ができます。<b>閉じている間の通知は、設定で「通知を許可する」を押すまで届きません。</b>' + clockNote
+      : '<b>Web版です。</b>開いている間の案内と記録ができます。<b>閉じている間の通知・アラームは鳴りません</b>（プッシュ通知は未設定）。起床などの目覚ましは、iPad の「時計」のアラームを使ってください。記録はこの端末の中だけに保存します。';
     document.getElementById('notice').innerHTML = (!D.noticeRead || V.noticeOpen)
       ? '<div class="notice"><span>' + noticeText + '</span>' +
         '<button class="btn" style="min-height:40px;font-size:15px" data-a="' + (D.noticeRead ? 'notice' : 'noticeRead') + '">' + (D.noticeRead ? '閉じる' : 'わかった（たたむ）') + '</button></div>'
@@ -686,6 +815,12 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
         '<p class="small muted">記録は、Safari で開いたときとホーム画面から開いたときで別々に保存されます。追加したあとはホーム画面のほうだけを使ってください。Safari で付けた記録を持っていきたいときは、設定の「バックアップ」で移せます。</p>' +
         '<button class="btn ghost" data-a="installHide">この案内を隠す</button></div></section>');
     }
+    // 通知が使えるのにオフのとき・預け直しに失敗し続けているときは、ホームで知らせる
+    if (PUSH && pushSupported() && !pushOn()) {
+      out.push('<button class="banner" data-a="tab" data-v="settings"><span>通知がオフです。' + (pushPerm() === 'denied' ? 'iPad の「設定」で通知の許可が必要です' : PS.lost ? '通知の設定が外れていました。もう一度許可してください' : '「通知を許可する」を押すと、時刻に知らせます') + '</span><b>設定へ</b></button>');
+    } else if (pushOn() && PS.err && Date.now() - (PS.okAt || 0) > 30 * MIN) {
+      out.push('<button class="banner" data-a="tab" data-v="settings"><span>通知の予約を更新できていません。通信を確認してください</span><b>設定へ</b></button>');
+    }
     if (st) out.push(staleCard(st));
     if (sn.rest) out.push('<div class="banner ok"><span>今日は運動・勉強はお休みの日です</span></div>');
     var ls = L.laundryStatus(D.laundry, n);
@@ -715,11 +850,16 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
   }
 
   function scheduleCard() {
-    var list = L.scheduleFor(now(), S(), D);
-    return '<details class="card"><summary>本番アプリが今日このあと知らせるもの（' + list.length + '件）</summary>' +
-      '<p class="small muted">試用版では鳴りません。iPad アプリでは、アラームは AlarmKit、それ以外はローカル通知で知らせます。</p>' +
+    var list = L.scheduleFor(now(), S(), D), web = !!PUSH, on = pushOn();
+    var head = !web ? '本番アプリが今日このあと知らせるもの' : on ? '今日このあと届く通知' : '通知をオンにすると、今日このあと届くもの';
+    var note = !web ? '試用版では鳴りません。iPad アプリでは、アラームは AlarmKit、それ以外はローカル通知で知らせます。'
+      : on ? 'プッシュ通知で届きます（通信が必要・音は1回）。' + (D.sim ? '「時刻を試す」の間は、実際には届きません。' : '')
+      : '設定で「通知を許可する」を押すと届きます。';
+    return '<details class="card"><summary>' + head + '（' + list.length + '件）</summary>' +
+      '<p class="small muted">' + note + '</p>' +
       (list.length ? '<div class="list">' + list.map(function (x) {
-        return '<div class="li"><span class="time">' + L.fmtTime(x.at) + '</span><span class="body">' + esc(x.title) + '<br><span class="small muted">' + esc(x.body) + '</span></span><span class="end chip' + (x.channel === 'alarm' ? ' alarm' : '') + '">' + (x.channel === 'alarm' ? 'アラーム' : '通知') + '</span></div>';
+        var alarm = !web && x.channel === 'alarm';
+        return '<div class="li"><span class="time">' + L.fmtTime(x.at) + '</span><span class="body">' + esc(x.title) + '<br><span class="small muted">' + esc(x.body) + '</span></span><span class="end chip' + (alarm ? ' alarm' : '') + '">' + (alarm ? 'アラーム' : '通知') + '</span></div>';
       }).join('') + '</div>' : '<p class="muted">今日はこのあと知らせるものはありません。</p>') + '</details>';
   }
 
@@ -986,8 +1126,10 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
 
   function settingsView() {
     var s = S(), h = '<div class="stack" style="margin-top:16px"><h1 class="display">設定</h1>';
+    h += pushCard();
     h += '<button class="banner info" data-a="go" data-v="status"><span>' + (SITE ? '通知の状況（この Web版と、別に作っている iPad アプリ）' : '本番アプリの状況と、通知・アラームの確認表') + '</span><b>開く</b></button>';
-    h += '<section class="card"><span class="label">生活の時刻（時刻・所要時間・曜日・知らせるか）</span>';
+    h += '<section class="card"><span class="label">生活の時刻（時刻・所要時間・曜日・知らせるか）</span>' +
+      (PUSH ? '<p class="small muted">Web版では、知らせ方で「アラーム」を選んでも通知（音は1回）になります。</p>' : '');
     L.ORDER.forEach(function (id) {
       var st = s.steps[id];
       h += '<div class="set-row"><b>' + esc(L.INFO[id].title) + '</b><div class="set-grid">' +
@@ -1039,6 +1181,62 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
       (V.confirm === 'reset' ? '<div class="banner"><span>記録と設定をすべて消して、最初の状態に戻しますか？</span><button class="btn danger" data-a="reset">消す</button><button class="btn" data-a="cancelConfirm">やめる</button></div>' : '<button class="btn danger" data-a="askReset">記録と設定を消す</button>') + '</div></section>';
     return h + '</div>';
   }
+  // 設定のいちばん上に出す、通知の状態と操作
+  function pushCard() {
+    if (!SITE) return '';
+    var h = '<section class="card"><div class="stack"><span class="label">通知（プッシュ通知）</span>', end = '</div></section>';
+    if (!PUSH) return h + '<p>通知を送るサーバーが、まだ設定されていません。閉じている間の通知は届きません。</p>' + end;
+    if (!pushSupported()) {
+      return h + (IOS && !STANDALONE
+        ? '<p><b>Safari のままでは通知を使えません。</b>ホーム画面に追加して、「一日の流れ」のアイコンから開いてください。そこでこの場所に「通知を許可する」ボタンが出ます。</p>'
+        : '<p>このブラウザでは通知を使えません。iPad では、ホーム画面に追加したアイコンから開くと使えます。</p>') + end;
+    }
+    if (pushPerm() === 'denied') return h + '<p><b>通知が許可されていません。</b>iPad の「設定」→「通知」→「一日の流れ」を開いて、通知を許可してください。</p>' + end;
+    var msg = PV.msg ? '<div class="banner"><span>' + esc(PV.msg) + '</span></div>' : '';
+    if (!pushOn()) {
+      return h + '<p>決まった時刻に、プッシュ通知で知らせます。通信が必要で、音は1回です。起床など確実に鳴らしたいものは、iPad の「時計」のアラームも使ってください。</p>' +
+        (PS.lost ? '<div class="banner"><span>通知の設定が外れていました。もう一度許可してください。</span></div>' : '') + msg +
+        '<button class="btn primary" data-a="pushOn"' + (PV.busy ? ' disabled' : '') + '>' + (PV.busy ? '設定しています…' : '通知を許可する') + '</button>' +
+        '<p class="small muted">サーバーに預けるのは、通知の時刻と文面、この端末への届け先だけです。勉強の記録は送りません。</p>' + end;
+    }
+    var row = function (a, b) { return '<tr><th scope="row" style="white-space:nowrap">' + a + '</th><td>' + b + '</td></tr>'; };
+    h += '<p><b>通知はオンです。</b>' + (D.sim ? '「時刻を試す」の間は、預けた通知を更新しません。' : '') + '</p>' +
+      '<div class="scroll"><table><tbody>' +
+      row('預けている通知', (PS.count || 0) + '件' + (PS.next ? '（次は ' + whenText(PS.next.at) + '「' + esc(PS.next.title) + '」）' : '')) +
+      row('最後に預けた時刻', PS.okAt ? whenText(PS.okAt) : 'まだ') +
+      row('この端末に届くことの確認', verifiedText()) + '</tbody></table></div>';
+    if (PS.err) h += '<div class="banner"><span>いまの内容をサーバーに預けられていません。通信を確認してください。通信が戻ると、自動で預け直します。</span></div>';
+    h += msg;
+    if (PS.testAsk) {
+      h += '<div class="banner info"><span>' + L.fmtTime(PS.testAt) + ' ごろにテスト通知を送ります。' + (PS.testKind === 'closed' ? 'アプリを閉じるか画面をロックして待ってください。' : '') + '届きましたか？</span>' +
+        '<button class="btn" data-a="pushGot" data-v="yes">届いた</button><button class="btn" data-a="pushGot" data-v="no">届かなかった</button></div>';
+    } else {
+      h += '<div class="row"><button class="btn" data-a="pushTest" data-v="10"' + (PV.busy ? ' disabled' : '') + '>テスト通知（10秒後）</button><button class="btn" data-a="pushTest" data-v="60"' + (PV.busy ? ' disabled' : '') + '>テスト通知（1分後）</button></div>' +
+        '<p class="small muted">1分後のほうは、押したあとにアプリを閉じるか画面をロックして、閉じている間に届くかを確かめるためのものです。</p>';
+    }
+    if (PV.help) {
+      h += '<div class="stack"><b>届かなかったときに見るところ</b>' +
+        '<p>1. ホーム画面の「一日の流れ」のアイコンから開いているか</p>' +
+        '<p>2. iPad の「設定」→「通知」→「一日の流れ」で、通知とサウンドがオンか</p>' +
+        '<p>3. 集中モード（おやすみモードなど）と消音がオフか</p>' +
+        '<p>4. Wi-Fi などの通信がつながっているか</p>' +
+        '<p>5. それでも届かないときは、下の「サーバーの記録を見る」を押して、画面の写真を送ってください</p></div>';
+    }
+    h += '<div class="row"><button class="btn ghost" data-a="pushStatus">サーバーの記録を見る</button>' +
+      (V.confirm === 'pushOff' ? '' : '<button class="btn ghost" data-a="pushOffAsk">通知をやめる</button>') + '</div>';
+    if (V.confirm === 'pushOff') h += '<div class="banner"><span>通知をやめますか？ サーバーに預けた通知と届け先を消します。</span><button class="btn danger" data-a="pushOff">やめる</button><button class="btn" data-a="cancelConfirm">戻る</button></div>';
+    if (PV.server) {
+      var sv = PV.server, names = { sent: '配信側が受け付けた', late: '遅れたので送らなかった', gone: '端末側で通知が外されていた', retry: '失敗したので送り直す', failed: '断られた', 'no-destination': '届け先がなかった' };
+      h += sv.error ? '<p class="muted">サーバーに問い合わせできませんでした。通信を確認してください。</p>'
+        : '<div class="scroll"><table><thead><tr><th>送った時刻</th><th>通知</th><th>結果</th></tr></thead><tbody>' +
+          ((sv.log || []).length ? sv.log.slice().reverse().map(function (x) {
+            var k = String(x.result).split(' ');
+            return '<tr><td class="num">' + whenText(x.at) + '</td><td>' + esc(x.title) + '</td><td>' + esc((names[k[0]] || k[0]) + (k[1] ? '（' + k.slice(1).join(' ') + '）' : '')) + '</td></tr>';
+          }).join('') : '<tr><td colspan="3" class="muted">まだ送った記録はありません</td></tr>') + '</tbody></table></div>' +
+          '<p class="small muted">サーバーが預かっている通知：' + sv.count + '件。「配信側が受け付けた」は、Apple などの配信の窓口まで届いたという意味です。端末で鳴ったかどうかは、iPad で確かめてください。</p>';
+    }
+    return h + end;
+  }
   function num(label, path, v, min, max) {
     var id = 'p-' + path.replace(/\./g, '-');
     return '<div class="field"><label class="small muted" for="' + id + '">' + label + '</label><input type="number" id="' + id + '" min="' + min + '" max="' + max + '" value="' + v + '" data-s="' + path + '" data-k="int"></div>';
@@ -1056,14 +1254,16 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
       ['端末の再起動後', '資料：一度ロックを解除するまで鳴らない', '残るかは資料でも未確認']
     ];
     var web = [
-      ['いまの状態', '閉じている間の通知・アラームは<b>鳴りません</b>（プッシュ通知は未設定）'],
+      ['いまの状態', pushOn() ? 'プッシュ通知は<b>オン</b>（' + (PS.count || 0) + '件を預けています）' : PUSH ? 'プッシュ通知は<b>オフ</b>。設定の「通知を許可する」でオンにできます' : '閉じている間の通知・アラームは<b>鳴りません</b>（プッシュ通知は未設定）'],
       ['開いている間', '案内・計測・運動プラン・洗濯・記録が使えます。一度開いたあとは、通信がなくても開けます'],
-      ['プッシュ通知を足す場合', 'iPadOS 16.4 以上で、ホーム画面に追加したアプリの中のボタンを押して許可します（Apple の資料）。決まった時刻に送るサーバーが別に必要です'],
-      ['通信がないとき', 'プッシュ通知は届きません'],
+      ['プッシュ通知のしくみ', '決まった時刻に、サーバー（Cloudflare）から iPad へ通知を送ります。iPadOS 16.4 以上で、ホーム画面に追加したアプリだけが受け取れます（Apple の資料）'],
+      ['予定を変えたとき', '完了・省略・時刻の変更をすると、預けた通知を入れ替えます（通信が必要）。「演習開始」を押すと、残りの催促は消えます'],
+      ['通信がないとき', '届きません。10分以上遅れた通知は、あとからまとめて鳴らさずに捨てます'],
+      ['何日も開かないとき', '7日先までの通知を預けています。それより先は、アプリを開いたときに預け直します'],
       ['音', '通知音が1回です。止めるまで鳴り続けるアラームにはできません'],
       ['集中モード・消音', '影響を受けます（資料：集中モードと連動）'],
       ['確実に鳴らしたいもの', '起床などは、iPad の「時計」のアラームを使ってください'],
-      ['実機での確認', '<b>すべて未確認</b>']
+      ['この端末での確認', PUSH ? verifiedText() : '<b>すべて未確認</b>']
     ];
     return '<div class="stack" style="margin-top:16px"><h1 class="display">状況</h1>' +
       (SITE ? '<section class="card"><span class="label">この Web版（ホーム画面に追加して使う）の通知</span><div class="scroll"><table><tbody>' +
@@ -1079,7 +1279,7 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
       '<p>1. GitHub の Mac でビルドとテストをする（費用なし。まずコンパイルが通るかを確かめる）。</p>' +
       '<p>2. iPad に入れる方法を選ぶ：Mac を借りる（無料の Apple ID だと7日ごとに入れ直し）／Apple Developer Program に登録して TestFlight で入れる（年額）／Windows 用の非公式ツール（自己判断。こちらでは試していません）。</p></div></section>' +
       '<section class="card"><div class="stack"><span class="label">' + (SITE ? 'この Web版と iPad アプリ（ネイティブ）の違い' : 'この試用版と本番の違い') + '</span>' +
-      '<p>通知・アラームは鳴りません。「今日このあと知らせるもの」に、iPad アプリで予約する時刻だけを出しています。音（ノイズ・チャイム・合図）はページを開いている間だけ鳴ります。カメラの明るさ判定は使えません。「時刻を試す」で朝や夜の流れを今すぐ確かめられます。</p></div></section>' +
+      '<p>' + (PUSH ? '止めるまで鳴り続けるアラームは使えません。知らせはプッシュ通知で、通信が必要です。' : '通知・アラームは鳴りません。「今日このあと知らせるもの」に、iPad アプリで予約する時刻だけを出しています。') + '音（ノイズ・チャイム・合図）はページを開いている間だけ鳴ります。カメラの明るさ判定は使えません。「時刻を試す」で朝や夜の流れを今すぐ確かめられます。</p></div></section>' +
       '<div class="back"><button class="btn ghost" data-a="settingsHome">← 設定へ</button></div></div>';
   }
 
@@ -1165,12 +1365,17 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
     lastSig = signature();
     syncWake();
   }
-  // 画面に戻ってきたとき：止まっていた間の時刻を取り戻して描き直す
+  // 入力の途中や下から出る画面の最中は描き直さない
+  function softRender() {
+    var a = document.activeElement, typing = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
+    if (!typing && !V.sheet) render();
+  }
+  // 画面に戻ってきたとき：止まっていた間の時刻を取り戻して描き直す。通知も預け直す
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState !== 'visible') return;
     tick();
-    var a = document.activeElement, typing = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
-    if (!typing && !V.sheet) render();
+    softRender();
+    pushSync(false);
   });
 
   // 1秒ごと：時計と残り時間だけ書き換える。表示が変わるときだけ全体を描き直す（押している途中のボタンを消さないため）
@@ -1186,6 +1391,8 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
     if (ds.workout && L.refreshWorkout(ds.workout, n)) { if (!L.finished(ds, 'workout')) L.complete(ds, 'workout', ds.workout.finishedAt); save(); }
     if (ds.meditation && ds.meditation.endedAt == null && !L.finished(ds, 'meditation') && n >= ds.meditation.plannedEnd) { finishMeditation(true); if (AC) beep(true); }
     var c = document.getElementById('clock'); if (c) c.innerHTML = clockText();
+    // 通知：開いている間は10分ごとに預け直す（過ぎた分を片づける）。失敗しているときは1分ごとに試す
+    if (pushOn() && !D.sim && Date.now() - pushTried > (PS.err ? MIN : 10 * MIN)) pushSync(false);
     document.querySelectorAll('[data-cd]').forEach(function (e) { e.textContent = L.fmtClock((Number(e.dataset.cd) - n) / 1000); });
     document.querySelectorAll('[data-el]').forEach(function (e) { var x = findSession(e.dataset.el); if (x) e.textContent = L.fmtClock(L.activeSec(x, n)); });
     document.querySelectorAll('[data-one]').forEach(function (e) { var x = findSession(e.dataset.one), tg = Number(e.dataset.target); if (x) { var a = L.activeSec(x, n); e.textContent = L.fmtClock(a >= tg ? a : tg - a); } });
@@ -1208,6 +1415,7 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
   }
   render();
   setInterval(tick, 1000);
+  pushSync(false);
 })();
 </script>
 </body>
