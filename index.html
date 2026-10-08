@@ -216,10 +216,20 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
 
   // ---------- 保存（このブラウザだけ） ----------
   function fresh() { return { settings: L.defaultSettings(), days: {}, sessions: [], laundry: L.newLaundry(), subjects: ['簿記論'], sim: null, noticeRead: false, installHide: false }; }
+  // 前の版で保存した設定に、あとから増えた項目を足す
+  function migrate(d) {
+    var def = L.defaultSettings(), s = d.settings;
+    if (!s.repeat) {
+      // 2026-10-08「押すまで鳴らし直す」を追加。起床の鳴らし直しも、前の初期値のままなら強める
+      s.repeat = def.repeat;
+      if (s.wake && s.wake.interval === 3 && s.wake.count === 3) { s.wake.interval = def.wake.interval; s.wake.count = def.wake.count; }
+    }
+    return d;
+  }
   function load() {
     try {
       var raw = localStorage.getItem(KEY);
-      if (raw) { var d = JSON.parse(raw); if (d && d.settings && d.days) return d; }
+      if (raw) { var d = JSON.parse(raw); if (d && d.settings && d.days) return migrate(d); }
     } catch (e) { /* 読めなくても最初から動く */ }
     return fresh();
   }
@@ -649,7 +659,7 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
       var el = document.getElementById('restore-text'), msg = null;
       try {
         var o = JSON.parse(el.value), d = o && o.app === 'ichinichi' ? o.data : null;
-        if (d && d.settings && d.days && Array.isArray(d.sessions)) { stopNoise(); setChime(false); D = d; D.sim = null; V.sheet = null; save(); render(); return; }
+        if (d && d.settings && d.days && Array.isArray(d.sessions)) { stopNoise(); setChime(false); D = migrate(d); D.sim = null; V.sheet = null; save(); render(); return; }
         msg = 'このアプリのバックアップではないようです。';
       } catch (e) { msg = '読み取れませんでした。バックアップの文字をすべて貼り付けてください。'; }
       V.sheet = { type: 'restore', error: msg, text: el.value }; render();
@@ -1127,6 +1137,7 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
   function settingsView() {
     var s = S(), h = '<div class="stack" style="margin-top:16px"><h1 class="display">設定</h1>';
     h += pushCard();
+    h += forceCard();
     h += '<button class="banner info" data-a="go" data-v="status"><span>' + (SITE ? '通知の状況（この Web版と、別に作っている iPad アプリ）' : '本番アプリの状況と、通知・アラームの確認表') + '</span><b>開く</b></button>';
     h += '<section class="card"><span class="label">生活の時刻（時刻・所要時間・曜日・知らせるか）</span>' +
       (PUSH ? '<p class="small muted">Web版では、知らせ方で「アラーム」を選んでも通知（音は1回）になります。</p>' : '');
@@ -1148,11 +1159,22 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
         '<div class="field"><label class="small muted" for="nx-' + i + '">文面</label><input type="text" id="nx-' + i + '" value="' + esc(n.text) + '" data-s="nudges.' + i + '.text"></div></div>';
     });
     h += '</section>';
+    h += '<section class="card"><span class="label">押すまで鳴らし直す</span>' +
+      '<p class="small muted">ボタンを押すまで、同じ知らせを何分かおきに繰り返します。押すと、残りは取り消します' + (PUSH ? '（取り消しには通信が必要です）' : '') + '。</p>';
+    [['wake', '朝：「カーテンを開けた」を押すまで', 'wake.followUp', 'wake.interval', 'wake.count', s.wake.followUp, s.wake.interval, s.wake.count],
+      ['workout', '夕方：「運動開始」を押すまで'], ['nightStudy', '夜：「演習開始」を押すまで'],
+      ['tomorrowPrep', '21:30：翌朝の準備の「完了」を押すまで'], ['bedtime', '22:00：就寝の「完了」を押すまで']].forEach(function (x) {
+      var id = x[0], r = s.repeat[id] || {}, on = x.length > 2 ? x[5] : r.on, iv = x.length > 2 ? x[6] : r.interval, ct = x.length > 2 ? x[7] : r.count;
+      var pOn = x[2] || 'repeat.' + id + '.on', pIv = x[3] || 'repeat.' + id + '.interval', pCt = x[4] || 'repeat.' + id + '.count';
+      h += '<div class="set-row"><b>' + x[1] + '</b><div class="set-grid">' +
+        '<label class="toggle"><input type="checkbox" id="rp-' + id + '"' + (on ? ' checked' : '') + ' data-s="' + pOn + '">繰り返す</label>' +
+        num('間隔（分）', pIv, iv, 1, 10) + num('回数', pCt, ct, 0, 10) + '</div></div>';
+    });
+    h += '</section>';
     h += '<section class="card"><span class="label">そのほか</span><div class="set-grid" style="margin-top:10px">' +
       num('「あとで」（分）', 'laterMinutes', s.laterMinutes, 5, 60) + num('出発の何分前に知らせる', 'departureWarn', s.departureWarn, 0, 30) +
       num('洗濯の予定所要時間（分）', 'laundry.duration', s.laundry.duration, 10, 180) + num('「まだ」のあと再通知（分）', 'laundry.reNotify', s.laundry.reNotify, 5, 60) +
-      num('瞑想の延長（分）', 'meditation.extend', s.meditation.extend, 3, 30) + num('起床の鳴らし直し 間隔（分）', 'wake.interval', s.wake.interval, 1, 10) +
-      num('起床の鳴らし直し 回数', 'wake.count', s.wake.count, 0, 10) + num('ZUMBA後の「少しだけ」（秒）', 'study.oneMinute', s.study.oneMinute, 30, 300) +
+      num('瞑想の延長（分）', 'meditation.extend', s.meditation.extend, 3, 30) + num('ZUMBA後の「少しだけ」（秒）', 'study.oneMinute', s.study.oneMinute, 30, 300) +
       num('朝の勉強の目安 ここから（分）', 'study.min', s.study.min, 1, 30) + num('朝の勉強の目安 ここまで（分）', 'study.max', s.study.max, 5, 60) +
       '</div></section>';
     h += '<section class="card"><span class="label">運動（曜日ごと）</span>';
@@ -1236,6 +1258,21 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
           '<p class="small muted">サーバーが預かっている通知：' + sv.count + '件。「配信側が受け付けた」は、Apple などの配信の窓口まで届いたという意味です。端末で鳴ったかどうかは、iPad で確かめてください。</p>';
     }
     return h + end;
+  }
+  // 通知だけでは足りないとき：iPad 自身の設定で、時刻になったら他のアプリを止める手順
+  function forceCard() {
+    if (!SITE) return '';
+    return '<details class="card"><summary>もっと強くする：時刻になったら他のアプリを止める（iPad の設定）</summary><div class="stack" style="margin-top:10px">' +
+      '<p>このアプリにできるのは、押すまで通知を繰り返すところまでです。他のアプリを止める力は、iPad の「スクリーンタイム」にあります。</p>' +
+      '<p>1. iPad の「設定」→「スクリーンタイム」を開く。オフなら「アプリとWebサイトのアクティビティ」をオンにする</p>' +
+      '<p>2. 「スクリーンタイム設定をロック」を押して、パスコードを決める。<b>自分で外せないようにするなら、家族の人に決めてもらう</b></p>' +
+      '<p>3. 「休止時間」→「スケジュール」をオン →「毎日」→ 開始 21:45、終了 5:55</p>' +
+      '<p>4. 同じ画面の「休止時間中にブロック」をオンにする</p>' +
+      '<p>5. 「常に許可」で、残したいアプリ（「時計」など）だけを許可する</p>' +
+      '<p>6. 「時計」アプリに 6:00 のアラームを入れる。iPad は、ベッドから手が届かない場所に置く</p>' +
+      '<p class="small muted">休止時間の間は、この「一日の流れ」も開けなくなることがあります。21:45 までに「翌朝の準備」を完了にしてください。22:00 の就寝は、押さなくて大丈夫です。</p>' +
+      '<p class="small muted">パスコードを忘れると、iPad の初期化が必要になることがあります。決めた人が、紙に書いて残してください。</p>' +
+      '<p class="small muted">メニューの名前は、iPadOS の版で少し違うことがあります。この手順は、iPad の実機では確かめていません。</p></div></details>';
   }
   function num(label, path, v, min, max) {
     var id = 'p-' + path.replace(/\./g, '-');

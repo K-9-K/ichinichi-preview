@@ -90,7 +90,14 @@
         tomorrowPrep: st(21, 30, 15, ALL, true),
         bedtime: st(22, 0, 0, ALL, true)
       },
-      wake: { followUp: true, interval: 3, count: 3 },
+      wake: { followUp: true, interval: 2, count: 8 },
+      // 押すまで鳴らし直す（interval 分おきに count 回）。起床は上の wake で決める
+      repeat: {
+        workout: { on: true, interval: 3, count: 5 },
+        nightStudy: { on: true, interval: 2, count: 5 },
+        tomorrowPrep: { on: true, interval: 3, count: 4 },
+        bedtime: { on: false, interval: 5, count: 2 }
+      },
       meditation: { extend: 10, endWithAlarm: true },
       study: { min: 5, max: 15, oneMinute: 60, confirm: { morning1: 30, morning2: 30, afterZumba: 120, night: 50, other: 150 } },
       laundry: { duration: 50, reNotify: 15 },
@@ -588,6 +595,14 @@
     return { kind: 'notChecked', label: '未実施', active: false };
   }
 
+  // 押すまで鳴らし直すときの文面：[最初の題, 鳴らし直しの題, 本文]
+  var REPEAT_TEXT = {
+    workout: ['運動を始めよう', '運動はまだ？', '着替えたら「運動開始」を押そう。押した時刻から終了までのプランを作ります'],
+    nightStudy: ['夜の演習', '演習はまだ？', '机に座って「演習開始」を押そう。最初の1問だけでいい'],
+    tomorrowPrep: ['翌朝の準備', '機器を閉じよう', '翌朝の準備が済んだら「完了」を押して、電子機器を閉じよう'],
+    bedtime: ['ベッドに入ろう', 'ベッドに入ろう', '「完了」を押して、iPad を置こう']
+  };
+
   // ---- 本番アプリで予約する知らせ（その日の分） ----
   function scheduleFor(now, s, data) {
     var day = dayKey(now), ds = data.days[day] || newDay(day), wd = weekday(day), out = [];
@@ -596,6 +611,15 @@
       var set = s.steps[id], info = INFO[id], r = rec(ds, id);
       if (set.days.indexOf(wd) < 0 || r.status !== 'pending') return;
       var at = dateAt(day, set.time);
+      // 押すまで鳴らし直す。「あとで」にしたときは、その時刻から数え直す。始めたら（運動開始・演習開始）止める
+      var rp = s.repeat && s.repeat[id], text = REPEAT_TEXT[id];
+      var started = (id === 'workout' && ds.workout) || (id === 'nightStudy' && ds.nightStudyStartedAt);
+      if (rp && rp.on && text && !started) {
+        var base = r.laterUntil != null ? Math.max(at, r.laterUntil) : at;
+        // 運動は、もとの知らせがないので最初の1回もここで出す
+        if (id === 'workout' && !set.notify) add('repeat.workout.0', 'notification', base, text[0], text[2]);
+        for (var n = 1; n <= rp.count; n++) add('repeat.' + id + '.' + n, 'notification', base + n * rp.interval * MIN, text[1], text[2]);
+      }
       if (set.notify && r.laterUntil != null && r.laterUntil > now) { add('later.' + id, 'notification', r.laterUntil, 'あとで にした「' + info.title + '」', info.guidance); return; }
       if (!set.notify) return;
       if (id === 'wake') {
@@ -650,7 +674,8 @@
         out.push({ id: id, at: x.at, title: x.title, body: x.body });
       });
     }
-    return out.sort(function (a, b) { return a.at - b.at || (a.id < b.id ? -1 : 1); });
+    // サーバーが預かるのは400件まで。超えそうなら、遠い日の分から落とす（その日までに預け直す）
+    return out.sort(function (a, b) { return a.at - b.at || (a.id < b.id ? -1 : 1); }).slice(0, 380);
   }
 
   var api = {

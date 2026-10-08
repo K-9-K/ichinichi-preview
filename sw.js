@@ -1,5 +1,5 @@
 // 一日の流れ：通信がなくても開けるようにする。作り直すたびに名前（版）が変わり、古い控えは消える。
-const CACHE = 'ichinichi-20261007174249';
+const CACHE = 'ichinichi-20261008173729';
 const SHELL = ['./', 'index.html', 'logic.js', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {
