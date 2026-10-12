@@ -42,8 +42,11 @@
   // ---- 設定の初期値 ----
   var ALL = [1, 2, 3, 4, 5, 6, 7], MON_SAT = [1, 2, 3, 4, 5, 6];
   var ORDER = ['wake', 'meditation', 'dressing', 'morningStudy1', 'breakfast', 'departurePrep', 'morningStudy2', 'departure',
+    'extraStudy1', 'extraStudy2',
     'homecoming', 'workout', 'laundryCheck', 'bath', 'dinner', 'zumba',
-    'afterZumba', 'nightSetup', 'nightStudy', 'tomorrowPrep', 'bedtime'];
+    'afterZumba', 'nightSetup', 'nightStudy', 'nightStudy2', 'nightStudy3', 'reading', 'tomorrowPrep', 'bedtime'];
+  // 夜の勉強の3つの部（理解・教科書 → 問題演習 → 間違い直し）
+  var NIGHT_STEPS = ['nightStudy', 'nightStudy2', 'nightStudy3'];
 
   function st(h, m, dur, days, notify, channel) {
     return { time: tod(h, m), dur: dur, days: days.slice(), notify: notify, channel: channel || 'notification' };
@@ -65,30 +68,49 @@
     bodyAttack: 'BODYATTACK（全身の有酸素・高強度）', upperBody: '胸を含む上半身', chest: '胸', glutes: 'お尻',
     glutesThighs: 'お尻・太もも', abs: '腹筋', zumba: 'ZUMBA', other: 'その他'
   };
-  var DAY_TYPE = { run: 'ランニング（インターバル）', upperBody: '胸を含む上半身＋腹筋', fullBody: '全身（強度控えめ）＋腹筋', glutes: 'お尻＋腹筋', rest: '休み' };
+  var DAY_TYPE = { run: 'インターバル走＋軽い筋トレ', upperBody: 'BODYATTACK＋胸＋腹筋', fullBody: 'BODYATTACK＋全身＋腹筋（強度控えめ）', glutes: 'BODYATTACK＋お尻＋腹筋', rest: '休み' };
+  var SHORT = { bodyAttack: 'BODYATTACK', upperBody: '上半身', chest: '胸', glutes: 'お尻', glutesThighs: 'お尻・太もも', abs: '腹筋' };
 
+  // 2026-10-12：本人の「1週間の生活・学習スケジュール」（v4）に合わせた初期値
   function defaultSettings() {
     return {
+      scheduleVersion: 4,
       steps: {
         wake: st(6, 0, 0, MON_SAT, true, 'alarm'),
         meditation: st(6, 0, 10, MON_SAT, true, 'alarm'),
-        dressing: st(6, 10, 10, ALL, false),
+        dressing: st(6, 10, 5, MON_SAT, false),
         morningStudy1: st(6, 15, 15, MON_SAT, false),
-        breakfast: st(6, 30, 20, ALL, true),
-        departurePrep: st(6, 50, 5, MON_SAT, true),
-        morningStudy2: st(6, 55, 15, MON_SAT, false),
+        breakfast: st(6, 30, 15, ALL, true),
+        departurePrep: st(6, 45, 15, MON_SAT, true),
+        morningStudy2: st(7, 0, 15, MON_SAT, false),
         departure: st(7, 15, 0, MON_SAT, true),
-        homecoming: st(17, 30, 10, MON_SAT, true),
-        workout: st(17, 40, 50, MON_SAT, false),
+        extraStudy1: st(9, 0, 90, [6], true),
+        extraStudy2: st(14, 0, 90, [6], true),
+        homecoming: st(17, 30, 15, MON_SAT, true),
+        workout: st(17, 45, 45, MON_SAT, false),
         laundryCheck: st(18, 30, 5, MON_SAT, true),
-        bath: st(18, 35, 15, ALL, false),
+        bath: st(18, 35, 25, ALL, false),
         dinner: st(19, 0, 30, ALL, false),
-        zumba: st(19, 30, 10, MON_SAT, true),
-        afterZumba: st(19, 40, 5, MON_SAT, true),
-        nightSetup: st(19, 45, 5, MON_SAT, false),
-        nightStudy: st(21, 0, 25, MON_SAT, false),
-        tomorrowPrep: st(21, 30, 15, ALL, true),
-        bedtime: st(22, 0, 0, ALL, true)
+        zumba: st(19, 30, 15, MON_SAT, true),
+        afterZumba: st(19, 45, 5, [], true),
+        nightSetup: st(20, 45, 15, MON_SAT, true),
+        nightStudy: st(21, 0, 30, MON_SAT, false),
+        nightStudy2: st(21, 30, 45, MON_SAT, true),
+        nightStudy3: st(22, 15, 15, MON_SAT, true),
+        reading: st(22, 30, 30, MON_SAT, true),
+        tomorrowPrep: st(22, 25, 5, [], true),
+        bedtime: st(23, 0, 0, ALL, true)
+      },
+      // 土曜の初期値：work = 出勤、off = 休み。その日ごとにホームで選び直せる
+      satDefault: 'work',
+      // 夜の勉強の科目（曜日ごと）：[21:00 理解・教科書, 21:30 問題演習, 22:15 間違い直し]
+      nightPlan: {
+        1: [{ subject: '消費税法', kind: '教科書' }, { subject: '財務諸表論', kind: '問題演習' }, { subject: '簿記論', kind: '間違い直し' }],
+        2: [{ subject: '簿記論', kind: '理解' }, { subject: '消費税法', kind: '問題演習' }, { subject: '財務諸表論', kind: '間違い直し' }],
+        3: [{ subject: '財務諸表論', kind: '教科書' }, { subject: '簿記論', kind: '問題演習' }, { subject: '消費税法', kind: '間違い直し' }],
+        4: [{ subject: '消費税法', kind: '教科書' }, { subject: '財務諸表論', kind: '問題演習' }, { subject: '簿記論', kind: '間違い直し' }],
+        5: [{ subject: '簿記論', kind: '理解' }, { subject: '消費税法', kind: '問題演習' }, { subject: '財務諸表論', kind: '間違い直し' }],
+        6: [{ subject: '財務諸表論', kind: '教科書' }, { subject: '簿記論', kind: '問題演習' }, { subject: '消費税法', kind: '間違い直し' }]
       },
       wake: { followUp: true, interval: 2, count: 8 },
       // 押すまで鳴らし直す（interval 分おきに count 回）。起床は上の wake で決める
@@ -99,22 +121,30 @@
         bedtime: { on: false, interval: 5, count: 2 }
       },
       meditation: { extend: 10, endWithAlarm: true },
-      study: { min: 5, max: 15, oneMinute: 60, confirm: { morning1: 30, morning2: 30, afterZumba: 120, night: 50, other: 150 } },
+      study: { min: 5, max: 15, oneMinute: 60, confirm: { morning1: 30, morning2: 30, afterZumba: 120, night: 45, night2: 60, night3: 30, extra1: 120, extra2: 120, other: 150 } },
       laundry: { duration: 50, reNotify: 15 },
       nudges: [
-        { id: 'n2055', time: tod(20, 55), text: '自由時間はあと5分。保存して終わろう', channel: 'notification', enabled: true },
-        { id: 'n2058', time: tod(20, 58), text: '飲み物を用意して机へ', channel: 'notification', enabled: true },
-        { id: 'n2100', time: tod(21, 0), text: '最初の1問を始めよう', channel: 'alarm', enabled: true }
+        { id: 'n2040', time: tod(20, 40), text: '自由時間はあと5分。保存して終わろう', channel: 'notification', enabled: true },
+        { id: 'n2055', time: tod(20, 55), text: 'あと5分で勉強。教材を開いておこう', channel: 'notification', enabled: true },
+        { id: 'n2100', time: tod(21, 0), text: '最初の1ページを始めよう', channel: 'alarm', enabled: true }
       ],
       wrapUpNotify: true, departureWarn: 5, laterMinutes: 10,
       workout: {
         end: tod(18, 30),
         days: {
-          1: { type: 'run' }, 2: { type: 'upperBody', main: 'DHOPWvO3ZcI', abs: 'AnYl6Nk9GOA', note: '' },
-          3: { type: 'run' }, 4: { type: 'fullBody', main: 'GWcLgph55Ig', abs: 'AnYl6Nk9GOA', note: '強度は控えめに。ジャンプは小さく、ペースを落としてよい' },
-          5: { type: 'run' }, 6: { type: 'glutes', main: 'WGnCC4udvlw', abs: 'AnYl6Nk9GOA', note: '' }, 7: { type: 'rest' }
+          1: { type: 'run' },
+          2: { type: 'upperBody', main: '_FGRAvlWpkc', sub: 'Bi1IRzJIoAo', abs: 'AnYl6Nk9GOA', note: '' },
+          3: { type: 'run' },
+          4: { type: 'fullBody', main: 'GWcLgph55Ig', sub: null, abs: 'AnYl6Nk9GOA', note: '強度は控えめに。ジャンプは小さく、ペースを落としてよい' },
+          5: { type: 'run' },
+          6: { type: 'glutes', main: '_FGRAvlWpkc', sub: 'WGnCC4udvlw', abs: 'AnYl6Nk9GOA', note: '' },
+          7: { type: 'rest' }
         },
-        golf: { base: 10, min: 3, max: 20 }, prep: { base: 5, min: 2, max: 8 }, cooldown: { base: 5, min: 3, max: 10 },
+        golf: { base: 10, min: 3, max: 15 }, prep: { base: 3, min: 2, max: 5 }, cooldown: { base: 3, min: 2, max: 5 },
+        // 2本目の動画がある日は、2本目と腹筋をそれぞれこの分数までにして 18:30 に収める
+        subCap: 6,
+        // ランニングの日の「軽い筋トレ」（分）
+        strength: { base: 6, min: 0, max: 8 },
         switchSec: 60, restMax: 5,
         interval: { jog: 180, fast: 30, slow: 60, baseSets: 10, minSets: 3, walk: 120 },
         partialMin: 5, unknownMin: 11
@@ -131,24 +161,47 @@
   var INFO = {
     wake: I('カーテンを開けよう', '起きたら、まずカーテンを開けて部屋を明るくしよう', [], 'morning', 'curtain', false, 0, { atStep: 'breakfast' }),
     meditation: I('寝た姿勢で瞑想', '横になったまま、音を聞きながらゆっくり呼吸しよう', [], 'morning', 'meditation', true, 0, { afterEnd: 10 }),
-    dressing: I('身支度', '順番にすませよう', ['シャツに着替える', 'トイレ', '口をゆすぐ', '掛けてあるズボンをはく'], 'morning', 'checklist.dressing', true, 0, { atStep: 'departurePrep' }),
-    morningStudy1: I('朝の勉強①', '科目を選んで「開始」だけでOK。5〜15分', [], 'morning', 'study.morning1', true, 0, { atStep: 'breakfast' }, true),
+    dressing: I('水を飲む', 'トイレと口すすぎを済ませて、水を1杯飲もう', ['トイレ', '口をゆすぐ', '水を飲む'], 'morning', 'checklist.dressing', true, 0, { atStep: 'breakfast' }),
+    morningStudy1: I('朝の復習①', '科目を選んで「開始」だけでOK。15分', [], 'morning', 'study.morning1', true, 0, { atStep: 'breakfast' }, true),
     breakfast: I('朝食', '朝食をとろう', [], 'morning', 'step.breakfast', true, 0, { atStep: 'departurePrep' }),
-    departurePrep: I('歯磨き・出発準備', '歯磨きと残りの支度をすべて済ませよう。終わったら机へ', [], 'morning', 'step.departurePrep', true, 0, { atStep: 'departure' }),
-    morningStudy2: I('朝の勉強②', '机に座って5〜15分。①の続きから始められます', [], 'morning', 'study.morning2', true, 0, { atStep: 'departure' }, true),
-    departure: I('出発', '勉強を保存して、出発しよう', [], 'morning', 'step.departure', false, 'departureWarn', { afterEnd: 30 }),
+    departurePrep: I('歯磨き・身支度', '歯磨きと着替えを済ませよう。終わったら机へ', ['歯磨き', 'シャツに着替える', '掛けてあるズボンをはく'], 'morning', 'checklist.departurePrep', true, 0, { atStep: 'departure' }),
+    morningStudy2: I('朝の復習②', '机に座って15分。①の続きから始められます', [], 'morning', 'study.morning2', true, 0, { atStep: 'departure' }, true),
+    departure: I('通勤', '勉強を保存して、出発しよう', [], 'morning', 'step.departure', false, 'departureWarn', { afterEnd: 30 }),
+    extraStudy1: I('追加学習（午前）', '科目を選んで「開始」。10:30 まで', [], 'day', 'study.extra1', false, 0, { afterEnd: 60 }, true),
+    extraStudy2: I('追加学習（午後）', '科目を選んで「開始」。15:30 まで', [], 'day', 'study.extra2', false, 0, { afterEnd: 60 }, true),
     homecoming: I('帰宅したら', '2階玄関から入って、運動用の服に着替えよう', ['2階玄関から入る', 'ズボンを脱いで掛ける', '着ていたシャツを洗濯かごへ', '運動用の服に着替える', 'iPadを持って2階のジムへ'], 'evening', 'checklist.homecoming', false, 30, { workoutEnd: true }),
-    workout: I('運動', 'ジムに着いたら「運動開始」。終了時刻までに収まるプランを作ります', [], 'evening', 'workout', true, 0, { workoutEnd: true }, false, true),
+    workout: I('運動', 'ジムに着いたら「運動開始」。ゴルフから始めて、終了時刻までに収まるプランを作ります', [], 'evening', 'workout', true, 0, { workoutEnd: true }, false, true),
     laundryCheck: I('洗濯かごの確認', '洗濯かごはいっぱい？', [], 'evening', 'laundry', true, 0, { atStep: 'zumba' }),
-    bath: I('入浴', '18:50頃に出よう', [], 'evening', 'step.bath', true, 0, { afterEnd: 20 }),
+    bath: I('入浴', '夕食までに出よう', [], 'evening', 'step.bath', true, 0, { afterEnd: 20 }),
     dinner: I('夕食', '夕食の時間です', [], 'evening', 'step.dinner', true, 0, { atStep: 'zumba' }),
-    zumba: I('ZUMBA 10分', '軽く10分。終わったら机へ', [], 'evening', 'step.zumba', false, 10, { afterEnd: 20 }, false, true),
+    zumba: I('ZUMBA', '15分。終わったら自由時間', [], 'evening', 'step.zumba', false, 10, { afterEnd: 20 }, false, true),
     afterZumba: I('まず机に座ろう', '1分だけ勉強を始めよう', [], 'night', 'oneMinute', true, 0, { firstNudge: true }, true),
-    nightSetup: I('21時の準備', '用意して最初の問題を開いておけば、あとは自由時間', ['問題', '答案用紙', '電卓', 'ペン', '最初の問題を開いておく'], 'night', 'checklist.nightSetup', true, 0, { firstNudge: true }),
-    nightStudy: I('夜の演習', '最初の1問を始めよう', [], 'night', 'study.night', false, 'firstNudge', { atStep: 'tomorrowPrep' }, true),
+    nightSetup: I('机へ・教材準備', '机に座って、今日の教材を開いておこう', ['教科書', '問題集・答案用紙', '電卓・ペン', '最初のページを開いておく'], 'night', 'checklist.nightSetup', false, 0, { atStep: 'nightStudy' }),
+    nightStudy: I('夜の勉強① 理解・教科書', '教科書を開いて、最初の1ページを始めよう', [], 'night', 'study.night', false, 5, { atStep: 'nightStudy2' }, true),
+    nightStudy2: I('夜の勉強② 問題演習', '問題演習に切り替えよう。最初の1問から', [], 'night', 'study.night2', true, 0, { atStep: 'nightStudy3' }, true),
+    nightStudy3: I('夜の勉強③ 間違い直し', '間違えた問題を直そう', [], 'night', 'study.night3', true, 0, { atStep: 'reading' }, true),
+    reading: I('読書', '財表の本 → 疲れたら小説 → 娯楽なら漫画', [], 'night', 'step.reading', true, 0, { atStep: 'bedtime' }),
     tomorrowPrep: I('翌朝の準備', '準備したら電子機器を閉じよう', ['翌朝の教材', '服', '持ち物', '目覚まし（iPadの充電・音量）'], 'night', 'checklist.tomorrowPrep', true, 0, { atStep: 'bedtime' }),
-    bedtime: I('ベッドへ', '22:00頃にはベッドに入ろう。アプリは開かなくて大丈夫', [], 'night', 'step.bedtime', false, 0, { afterEnd: 90 })
+    bedtime: I('就寝', 'ベッドに入ろう。アプリは開かなくて大丈夫', [], 'night', 'step.bedtime', false, 0, { afterEnd: 90 })
   };
+  // 出勤の日だけ・土曜の休みの日だけに出す項目
+  INFO.departure.only = 'work'; INFO.homecoming.only = 'work';
+  INFO.extraStudy1.only = 'off'; INFO.extraStudy2.only = 'off';
+
+  // その日の種類：work = 出勤（月〜金と、出勤の土曜）、off = 土曜の休み、rest = 日曜
+  function dayKind(wd, s, ds) { return wd === 7 ? 'rest' : wd === 6 ? ((ds && ds.dayType) || s.satDefault || 'work') : 'work'; }
+  // その日にその項目を出すか
+  function stepOn(id, s, wd, ds) {
+    var set = s.steps[id], only = INFO[id].only;
+    return !!set && set.days.indexOf(wd) >= 0 && (!only || only === dayKind(wd, s, ds));
+  }
+  // 夜の勉強の、その曜日・その部の科目
+  function nightPart(s, wd, id) {
+    var i = NIGHT_STEPS.indexOf(id), p = s.nightPlan && s.nightPlan[wd];
+    return i >= 0 && p && p[i] && p[i].subject ? p[i] : null;
+  }
+  // 画面と通知に出す名前。夜の勉強は「消費税法・教科書」のように科目を出す
+  function stepTitle(id, s, wd) { var np = nightPart(s, wd, id); return np ? np.subject + '・' + np.kind : INFO[id].title; }
 
   function firstNudge(s) {
     var t = s.nudges.filter(function (n) { return n.enabled; }).map(function (n) { return n.time; });
@@ -156,7 +209,7 @@
   }
 
   // ---- その日の状態 ----
-  function newDay(key) { return { day: key, steps: {}, meditation: null, workout: null, nightStudyStartedAt: null, events: [] }; }
+  function newDay(key) { return { day: key, steps: {}, meditation: null, workout: null, nightStudyStartedAt: null, dayType: null, events: [] }; }
   function rec(ds, id) { return ds.steps[id] || { status: 'pending', at: null, laterUntil: null, laterCount: 0, checks: [], method: null }; }
   function upd(ds, id, f) { var r = JSON.parse(JSON.stringify(rec(ds, id))); f(r); ds.steps[id] = r; }
   function log(ds, text, t) { ds.events.push({ at: t, text: text }); if (ds.events.length > 300) ds.events.splice(0, ds.events.length - 300); }
@@ -181,7 +234,7 @@
   // ---- 一日の流れ ----
   function resolve(day, s, ds) {
     var wd = weekday(day);
-    var enabled = ORDER.filter(function (id) { return s.steps[id].days.indexOf(wd) >= 0; });
+    var enabled = ORDER.filter(function (id) { return stepOn(id, s, wd, ds); });
     var on = {}; enabled.forEach(function (id) { on[id] = true; });
     var out = [], last = {};
     enabled.forEach(function (id) {
@@ -191,14 +244,14 @@
         : info.lead === 'firstNudge' ? Math.max(0, set.time - firstNudge(s)) : info.lead;
       var available = start - lead * MIN;
       var fallback = end + 30 * MIN, expires, ex = info.expiry, t;
-      if (ex.atStep) { t = dateAt(day, s.steps[ex.atStep].time); expires = (on[ex.atStep] && t > start) ? t : fallback; }
+      if (ex.atStep) { t = on[ex.atStep] ? dateAt(day, s.steps[ex.atStep].time) : 0; expires = t > start ? t : fallback; }
       else if (ex.afterEnd != null) { var extra = ex.afterEnd; if (id === 'meditation') extra = Math.max(extra, s.meditation.extend); expires = end + extra * MIN; }
       else if (ex.workoutEnd) { t = dateAt(day, s.workout.end); expires = t > start ? t : fallback; }
       else { t = dateAt(day, firstNudge(s)); expires = t > start ? t : fallback; }
       if (expires <= available) expires = fallback;
       var r = rec(ds, id), prev = last[info.group];
       if (info.chainEarly && prev && prev.rec.status !== 'pending' && prev.rec.at != null) available = Math.min(available, prev.rec.at);
-      var step = { id: id, title: info.title, guidance: info.guidance, checklist: info.checklist, route: info.route, setting: set,
+      var step = { id: id, title: stepTitle(id, s, wd), guidance: info.guidance, checklist: info.checklist, route: info.route, setting: set,
         start: start, end: end, available: available, expires: expires, rec: r };
       out.push(step); last[info.group] = step;
     });
@@ -243,8 +296,8 @@
     var idle = null;
     if (!current) {
       if (next) {
-        if (next.id === 'nightStudy') idle = '自由時間（' + todText(firstNudge(s)) + 'まで）';
-        else if (next.id === 'bedtime') idle = '電子機器を閉じて、歯磨きや紙の読書で過ごそう';
+        if ((next.id === 'nightSetup' || next.id === 'nightStudy') && !snoozed(next)) idle = '自由時間（' + fmtTime(Math.max(next.available, t)) + 'まで）';
+        else if (next.id === 'bedtime') idle = fmtTime(next.start) + ' にはベッドに入ろう';
         else if (snoozed(next)) idle = '「' + next.title + '」はあとで（' + fmtTime(next.rec.laterUntil) + 'にもう一度）';
         else idle = '次の予定まで自由に過ごせます';
       } else idle = '今日の予定はおしまい。おつかれさまでした';
@@ -260,23 +313,28 @@
     list.push({ id: 'golf', kind: 'golf', title: 'ゴルフ', note: '', base: w.golf.base * 60, min: w.golf.min * 60, max: w.golf.max * 60, partial: 0 });
     list.push({ id: 'prep', kind: 'prep', title: day.type === 'run' ? 'ランニング準備' : '準備運動', note: '', base: w.prep.base * 60, min: w.prep.min * 60, max: w.prep.max * 60, partial: 0 });
     var partial = w.partialMin * 60;
-    function vb(id, vid, fallback, aux) {
+    // cap = この動画に使う秒数の上限（0 なら最後まで）。full = 動画そのものの長さ
+    function vb(id, vid, fallback, aux, cap) {
       var v = null; videos.forEach(function (x) { if (x.id === vid) v = x; });
-      var secs = (v && v.sec) || w.unknownMin * 60;
-      var title = v ? (aux ? '腹筋' : (v.cat === 'bodyAttack' ? 'BODYATTACK' : fallback)) : fallback + '（動画未設定）';
+      var full = (v && v.sec) || w.unknownMin * 60, secs = cap ? Math.min(full, cap) : full;
+      var title = v ? (id === 'abs' ? '腹筋' : id === 'sub' ? (SHORT[v.cat] || fallback) : (v.cat === 'bodyAttack' ? 'BODYATTACK' : fallback)) : fallback + '（動画未設定）';
       var note = v ? (v.note || '') : '';
       if (!aux && day.note) note = day.note;
       return { id: id, kind: 'video', title: title, note: note, url: v ? v.url : null, lengthKnown: !!(v && v.sec), aux: aux,
-        high: !!(v && v.cat === 'bodyAttack'), base: secs, min: 0, max: secs, partial: Math.min(partial, secs) };
+        high: !!(v && v.cat === 'bodyAttack'), base: secs, full: full, min: 0, max: secs, partial: Math.min(partial, secs) };
     }
     if (day.type === 'run') {
       var iv = w.interval;
       list.push({ id: 'run', kind: 'interval', title: 'インターバルラン', note: '', high: true, iv: JSON.parse(JSON.stringify(iv)),
         base: iv.jog + iv.baseSets * (iv.fast + iv.slow) + iv.walk, min: 0, max: 0, partial: 0 });
+      var sg = w.strength;
+      if (sg && sg.base > 0) list.push({ id: 'strength', kind: 'strength', title: '軽い筋トレ', note: '無理のない回数で', base: sg.base * 60, min: sg.min * 60, max: sg.max * 60, partial: sg.min * 60 });
     } else {
       var fb = day.type === 'upperBody' ? '上半身（胸を含む）' : day.type === 'fullBody' ? '全身運動' : 'お尻';
-      list.push(vb('main', day.main, fb, false));
-      list.push(vb('abs', day.abs, '腹筋', true));
+      var cap = day.sub && w.subCap ? w.subCap * 60 : 0;
+      list.push(vb('main', day.main, fb, false, 0));
+      if (day.sub) list.push(vb('sub', day.sub, '2本目', true, cap));
+      list.push(vb('abs', day.abs, '腹筋', true, cap));
     }
     list.push({ id: 'cooldown', kind: 'cooldown', title: '整理運動', note: '', base: w.cooldown.base * 60, min: w.cooldown.min * 60, max: w.cooldown.max * 60, partial: 0 });
     return list;
@@ -326,7 +384,7 @@
       });
     }
     var isGolf = function (x) { return x.kind === 'golf'; };
-    var isAux = function (x) { return x.kind === 'video' && x.bs.block.aux; };
+    var isAux = function (x) { return (x.kind === 'video' && x.bs.block.aux) || x.kind === 'strength'; };
     var isMain = function (x) { return x.kind === 'video' && !x.bs.block.aux; };
     var isIv = function (x) { return x.kind === 'interval'; };
     var isPrep = function (x) { return x.kind === 'prep'; };
@@ -360,13 +418,16 @@
     extra -= rest;
     var spare = extra;
 
+    // 動画そのものの残りの長さ（上限をかけた動画は、これより短くなる）
+    function fullLeft(it) { var b = it.bs.block; return Math.max(0, (b.full || b.base) - it.bs.doneSeconds); }
     var notes = [];
     items.forEach(function (it) {
       var title = it.bs.block.title;
       if (it.kind === 'interval') {
         if (it.sets < it.baseSets) notes.push(it.sets === 0 ? 'インターバルは今日はなし（ジョグ・歩行' + (dur(it) > 0 ? 'のみ' : 'もなし') + '）' : 'インターバル ' + it.baseSets + '→' + it.sets + 'セット');
       } else if (it.secs === 0) notes.push(title + 'は今日は省略');
-      else if (it.secs < it.base) notes.push(it.kind === 'video' ? title + 'は最初の' + fmtMin(it.secs) + 'だけ' : title + ' ' + fmtMin(it.base) + '→' + fmtMin(it.secs));
+      else if (it.kind === 'video' && it.secs < fullLeft(it)) notes.push(title + 'は最初の' + fmtMin(it.secs) + 'だけ');
+      else if (it.secs < it.base) notes.push(title + ' ' + fmtMin(it.base) + '→' + fmtMin(it.secs));
       else if (it.secs > it.base) notes.push(title + ' +' + fmtMin(it.secs - it.base) + '（余裕のため）');
     });
     if (rest > 0) notes.push('休憩・水分補給 ' + fmtMin(rest));
@@ -387,7 +448,7 @@
       if (it.kind === 'golf' || it.kind === 'prep') add(b.id, it.kind, b.title, b.note, it.secs);
       else if (it.kind === 'video') {
         add(b.id, 'switchVideo', '動画の切り替え', '次：' + b.title, switchSec, b.url);
-        var detail = it.secs < it.base ? '動画の最初の' + fmtDur(it.secs) + 'まで'
+        var detail = it.secs < fullLeft(it) ? '動画の最初の' + fmtDur(it.secs) + 'まで'
           : !b.lengthKnown ? '動画の長さ未確認（仮に' + fmtMin(it.secs) + '）' : '動画 ' + fmtDur(it.secs) + '（実時間）';
         if (b.note) detail += '／' + b.note;
         add(b.id, 'video', b.title, detail, it.secs, b.url, b.high);
@@ -399,7 +460,8 @@
           add(b.id, 'slow', 'ゆっくり（' + (k + 1) + '/' + it.sets + '）', '呼吸を整える', iv.slow);
         }
         add(b.id, 'walk', 'ジョグ〜歩行', 'だんだんゆっくりに', it.walk);
-      } else if (it.kind === 'cooldown') {
+      } else if (it.kind === 'strength') add(b.id, 'strength', b.title, b.note, it.secs);
+      else if (it.kind === 'cooldown') {
         if (rest > 0) { add('rest', 'rest', '休憩・水分補給', '', rest); restPlaced = true; }
         add(b.id, 'cooldown', b.title, b.note, it.secs);
       }
@@ -450,7 +512,7 @@
       if (g.kind === 'jog') b.jogDone += ov;
       else if (g.kind === 'slow') { if (g.end <= t) b.setsDone += 1; }
       else if (g.kind === 'walk') b.walkDone += ov;
-      else if (g.kind === 'golf' || g.kind === 'prep' || g.kind === 'video' || g.kind === 'cooldown') b.doneSeconds += ov;
+      else if (g.kind === 'golf' || g.kind === 'prep' || g.kind === 'video' || g.kind === 'cooldown' || g.kind === 'strength') b.doneSeconds += ov;
     });
     Object.keys(touched).forEach(function (id) {
       var segs = plan.segments.filter(function (g) { return g.blockID === id && g.kind !== 'switchVideo'; });
@@ -512,8 +574,13 @@
   }
 
   // ---- 勉強 ----
-  var SLOT = { morning1: '朝①', morning2: '朝②', afterZumba: 'ZUMBA後', night: '夜の演習', other: 'その他' };
-  var SLOT_STEP = { morning1: 'morningStudy1', morning2: 'morningStudy2', afterZumba: 'afterZumba', night: 'nightStudy' };
+  var SLOT = { morning1: '朝の復習①', morning2: '朝の復習②', extra1: '追加（午前）', extra2: '追加（午後）', afterZumba: 'ZUMBA後',
+    night: '夜① 理解', night2: '夜② 演習', night3: '夜③ 直し', other: 'その他' };
+  var SLOT_STEP = { morning1: 'morningStudy1', morning2: 'morningStudy2', extra1: 'extraStudy1', extra2: 'extraStudy2', afterZumba: 'afterZumba',
+    night: 'nightStudy', night2: 'nightStudy2', night3: 'nightStudy3' };
+  // 止め忘れを疑うまでの分数。設定に無い区分は、ここの値を使う
+  var CONFIRM = { morning1: 30, morning2: 30, afterZumba: 120, night: 45, night2: 60, night3: 30, extra1: 120, extra2: 120, other: 150 };
+  function confirmMin(s, slot) { return (s.study.confirm && s.study.confirm[slot]) || CONFIRM[slot] || 150; }
   function sessionState(x) { if (x.endedAt != null) return 'finished'; var l = x.pauses[x.pauses.length - 1]; return l && l.end == null ? 'paused' : 'running'; }
   function activeSec(x, now) {
     var stop = x.endedAt != null ? x.endedAt : now, total = stop - x.startedAt;
@@ -523,7 +590,7 @@
   function needsConfirm(x, now, s) {
     if (x.endedAt != null) return false;
     if (dayKey(now) !== x.day) return true;
-    return activeSec(x, now) > s.study.confirm[x.slot] * 60;
+    return activeSec(x, now) > confirmMin(s, x.slot) * 60;
   }
   // 計測中の勉強のうち、「今すること」に出し続けてよい項目。止め忘れの疑いがある計測は入れない
   function activeStudySteps(sessions, day, now, s, stillStudying) {
@@ -536,10 +603,10 @@
     return a;
   }
   function suggestedEnd(x, s) {
-    var limitEnd = x.startedAt + s.study.confirm[x.slot] * MIN, planned = null;
+    var limitEnd = x.startedAt + confirmMin(s, x.slot) * MIN, planned = null, own = s.steps[SLOT_STEP[x.slot]];
     if (x.slot === 'morning1') planned = dateAt(x.day, s.steps.breakfast.time);
-    if (x.slot === 'morning2') planned = dateAt(x.day, s.steps.departure.time);
-    if (x.slot === 'night') planned = dateAt(x.day, s.steps.nightStudy.time + s.steps.nightStudy.dur);
+    else if (x.slot === 'morning2') planned = dateAt(x.day, s.steps.departure.time);
+    else if (own && x.slot !== 'afterZumba') planned = dateAt(x.day, own.time + own.dur);
     return planned != null && planned > x.startedAt ? Math.min(planned, limitEnd) : limitEnd;
   }
   var PRAISE = ['1分できた。今日も机に戻れたね', '1分できた。始められたのがいちばん大事', '1分できた。机に座れた、それで十分', '1分できた。今日もちゃんと戻ってこられたね'];
@@ -552,6 +619,7 @@
       t.bySlot[x.slot] = (t.bySlot[x.slot] || 0) + sec; t.total += sec; t.count++;
     });
     t.morning = (t.bySlot.morning1 || 0) + (t.bySlot.morning2 || 0);
+    t.night = (t.bySlot.night || 0) + (t.bySlot.night2 || 0) + (t.bySlot.night3 || 0);
     return t;
   }
   function weekTotals(day, sessions) {
@@ -567,8 +635,9 @@
     });
     return Object.keys(m).map(function (k) { return { name: k, sec: m[k] }; }).sort(function (a, b) { return b.sec - a.sec || (a.name < b.name ? -1 : 1); });
   }
-  function continuation(slot, day, sessions) {
-    var done = sessions.filter(function (x) { return x.endedAt != null; }).sort(function (a, b) { return b.startedAt - a.startedAt; });
+  // 前回の続き。subject を渡すと、その科目の直近の記録を返す（夜の勉強は科目が決まっているため）
+  function continuation(slot, day, sessions, subject) {
+    var done = sessions.filter(function (x) { return x.endedAt != null && (!subject || x.subject === subject); }).sort(function (a, b) { return b.startedAt - a.startedAt; });
     if (slot === 'morning2') { for (var i = 0; i < done.length; i++) if (done[i].day === day && done[i].slot === 'morning1') return done[i]; }
     return done[0] || null;
   }
@@ -598,7 +667,7 @@
   // 押すまで鳴らし直すときの文面：[最初の題, 鳴らし直しの題, 本文]
   var REPEAT_TEXT = {
     workout: ['運動を始めよう', '運動はまだ？', '着替えたら「運動開始」を押そう。押した時刻から終了までのプランを作ります'],
-    nightStudy: ['夜の演習', '演習はまだ？', '机に座って「演習開始」を押そう。最初の1問だけでいい'],
+    nightStudy: ['夜の勉強', '勉強はまだ？', '机に座って「開始」を押そう。最初の1ページだけでいい'],
     tomorrowPrep: ['翌朝の準備', '機器を閉じよう', '翌朝の準備が済んだら「完了」を押して、電子機器を閉じよう'],
     bedtime: ['ベッドに入ろう', 'ベッドに入ろう', '「完了」を押して、iPad を置こう']
   };
@@ -609,7 +678,9 @@
     function add(id, channel, at, title, body) { if (at > now) out.push({ id: id, channel: channel, at: at, title: title, body: body }); }
     ORDER.forEach(function (id) {
       var set = s.steps[id], info = INFO[id], r = rec(ds, id);
-      if (set.days.indexOf(wd) < 0 || r.status !== 'pending') return;
+      if (!stepOn(id, s, wd, ds) || r.status !== 'pending') return;
+      // 夜の勉強をもう始めているなら、「机へ・教材準備」は知らせない
+      if (id === 'nightSetup' && ds.nightStudyStartedAt) return;
       var at = dateAt(day, set.time);
       // 押すまで鳴らし直す。「あとで」にしたときは、その時刻から数え直す。始めたら（運動開始・演習開始）止める
       var rp = s.repeat && s.repeat[id], text = REPEAT_TEXT[id];
@@ -630,20 +701,23 @@
       } else if (id === 'departure') add('departure', 'notification', at - s.departureWarn * MIN, '出発' + s.departureWarn + '分前', '勉強を保存して、出発しよう');
       else if (id === 'laundryCheck') { if (!laundryDecided(data.laundry, day)) add('laundryCheck', 'notification', at, '運動終了。洗濯かごはいっぱい？', 'いっぱいなら運動着も入れて洗濯機を回し、「洗濯開始」を押そう'); }
       else if (id === 'afterZumba') add('afterZumba', 'notification', at, 'まず机に座ろう', laundryStatus(data.laundry, now).active ? '洗濯物を確認したら、1分だけ勉強を始めよう' : '1分だけ勉強を始めよう');
-      else if (id === 'nightStudy') { if (!ds.nightStudyStartedAt) add('nightStudy', set.channel, at, '夜の演習', '最初の1問を始めよう'); }
+      else if (id === 'nightStudy') { if (!ds.nightStudyStartedAt) add('nightStudy', set.channel, at, stepTitle(id, s, wd), '最初の1ページを始めよう'); }
       else if (id === 'bedtime') add('bedtime', 'notification', at, 'ベッドに入ろう', 'おやすみなさい。アプリは開かなくて大丈夫');
+      else if (id === 'reading') add('step.reading', 'notification', at, '勉強おわり。読書へ', '記録を保存したら、' + info.guidance);
       else if (id === 'tomorrowPrep') add('tomorrowPrep', 'notification', at, '翌朝の準備', '教材・服・持ち物・目覚ましを準備して、電子機器を閉じよう');
-      else add('step.' + id, set.channel, at, info.title, info.guidance);
+      else add('step.' + id, set.channel, at, stepTitle(id, s, wd), info.guidance);
     });
     var m = ds.meditation;
     if (m && rec(ds, 'meditation').status !== 'skipped' && (m.endedAt == null || m.endedAt >= m.plannedEnd))
       add('meditationEnd', s.meditation.endWithAlarm ? 'alarm' : 'notification', m.plannedEnd, '瞑想おわり', '音を止めて、身支度へ');
-    var night = s.steps.nightStudy;
-    if (night.days.indexOf(wd) >= 0) {
+    if (stepOn('nightStudy', s, wd, ds)) {
       if (!ds.nightStudyStartedAt && !finished(ds, 'nightStudy'))
-        s.nudges.forEach(function (n) { if (n.enabled) add('nudge.' + n.id, n.channel, dateAt(day, n.time), '夜の演習', n.text); });
-      if (s.wrapUpNotify && !finished(ds, 'nightStudy'))
-        add('wrapUp', 'notification', dateAt(day, night.time + night.dur), '終了処理の時間', '続きと間違いメモを書いて保存しよう');
+        s.nudges.forEach(function (n) { if (n.enabled) add('nudge.' + n.id, n.channel, dateAt(day, n.time), '夜の勉強', n.text); });
+      // 夜の勉強の最後の部が終わる5分前
+      var lastId = null;
+      NIGHT_STEPS.forEach(function (x) { if (stepOn(x, s, wd, ds)) lastId = x; });
+      if (s.wrapUpNotify && lastId && !finished(ds, lastId))
+        add('wrapUp', 'notification', dateAt(day, s.steps[lastId].time + s.steps[lastId].dur) - 5 * MIN, 'あと5分で勉強おわり', '続きと間違いメモを書いて、記録を保存しよう');
     }
     var lr = laundryReminder(data.laundry);
     if (lr != null) add('laundryEnd', 'notification', lr, '洗濯が終了予定です', '終わっているか確認しよう。干したら「干した」を押す');
@@ -690,7 +764,7 @@
     completeCurrent: function (w, t) { advance(w, t, 'done'); }, skipCurrent: function (w, t) { advance(w, t, 'skipped'); },
     refreshWorkout: refreshWorkout, finishWorkout: finishWorkout, workoutSummary: workoutSummary,
     sessionState: sessionState, activeSec: activeSec, needsConfirm: needsConfirm, suggestedEnd: suggestedEnd, praise: praise,
-    activeStudySteps: activeStudySteps, phase: phase,
+    activeStudySteps: activeStudySteps, phase: phase, NIGHT_STEPS: NIGHT_STEPS, dayKind: dayKind, stepOn: stepOn, nightPart: nightPart, stepTitle: stepTitle,
     dayTotals: dayTotals, weekTotals: weekTotals, bySubject: bySubject, continuation: continuation,
     newLaundry: newLaundry, laundryStart: laundryStart, laundrySkip: laundrySkip, laundryNotYet: laundryNotYet,
     laundryHang: laundryHang, laundryClose: laundryClose, laundryStatus: laundryStatus, laundryDecided: laundryDecided,
