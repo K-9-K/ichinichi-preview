@@ -74,7 +74,9 @@
   // 2026-10-12：本人の「1週間の生活・学習スケジュール」（v4）に合わせた初期値
   function defaultSettings() {
     return {
-      scheduleVersion: 4,
+      scheduleVersion: 5,
+      // 朝のまとめ（予定・やること・勉強・運動・注意事項）を通知する
+      morningSummary: true,
       steps: {
         wake: st(6, 0, 0, MON_SAT, true, 'alarm'),
         meditation: st(6, 0, 10, MON_SAT, true, 'alarm'),
@@ -140,7 +142,8 @@
           6: { type: 'glutes', main: '_FGRAvlWpkc', sub: 'WGnCC4udvlw', abs: 'AnYl6Nk9GOA', note: '' },
           7: { type: 'rest' }
         },
-        golf: { base: 10, min: 3, max: 15 }, prep: { base: 3, min: 2, max: 5 }, cooldown: { base: 3, min: 2, max: 5 },
+        // 準備運動は、時間が長くても短くても1分（2026-10-28 本人の希望）
+        golf: { base: 10, min: 3, max: 15 }, prep: { base: 1, min: 1, max: 1 }, cooldown: { base: 3, min: 2, max: 5 },
         // 2本目の動画がある日は、2本目と腹筋をそれぞれこの分数までにして 18:30 に収める
         subCap: 6,
         // ランニングの日の「軽い筋トレ」（分）
@@ -189,11 +192,12 @@
   INFO.extraStudy1.only = 'off'; INFO.extraStudy2.only = 'off';
 
   // その日の種類：work = 出勤（月〜金と、出勤の土曜）、off = 土曜の休み、rest = 日曜
-  function dayKind(wd, s, ds) { return wd === 7 ? 'rest' : wd === 6 ? ((ds && ds.dayType) || s.satDefault || 'work') : 'work'; }
+  // none = 予定を優先して、毎日の流れを休む日（旅行など）
+  function dayKind(wd, s, ds) { if (ds && ds.routineOff) return 'none'; return wd === 7 ? 'rest' : wd === 6 ? ((ds && ds.dayType) || s.satDefault || 'work') : 'work'; }
   // その日にその項目を出すか
   function stepOn(id, s, wd, ds) {
-    var set = s.steps[id], only = INFO[id].only;
-    return !!set && set.days.indexOf(wd) >= 0 && (!only || only === dayKind(wd, s, ds));
+    var set = s.steps[id], only = INFO[id].only, kind = dayKind(wd, s, ds);
+    return !!set && kind !== 'none' && set.days.indexOf(wd) >= 0 && (!only || only === kind);
   }
   // 夜の勉強の、その曜日・その部の科目
   function nightPart(s, wd, id) {
@@ -209,7 +213,7 @@
   }
 
   // ---- その日の状態 ----
-  function newDay(key) { return { day: key, steps: {}, meditation: null, workout: null, nightStudyStartedAt: null, dayType: null, events: [] }; }
+  function newDay(key) { return { day: key, steps: {}, meditation: null, workout: null, nightStudyStartedAt: null, dayType: null, routineOff: false, events: [] }; }
   function rec(ds, id) { return ds.steps[id] || { status: 'pending', at: null, laterUntil: null, laterCount: 0, checks: [], method: null }; }
   function upd(ds, id, f) { var r = JSON.parse(JSON.stringify(rec(ds, id))); f(r); ds.steps[id] = r; }
   function log(ds, text, t) { ds.events.push({ at: t, text: text }); if (ds.events.length > 300) ds.events.splice(0, ds.events.length - 300); }

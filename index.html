@@ -182,9 +182,75 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
 
 /* 下のタブ（5つ） */
 .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
-.tabs-in { max-width: 860px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
-.tab { border: 0; background: none; padding: 14px 4px 16px; font-size: 17px; font-weight: 700; color: var(--muted); cursor: pointer; }
+.tabs-in { max-width: 860px; margin: 0 auto; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.tab { border: 0; background: none; padding: 14px 2px 16px; font-size: 16px; font-weight: 700; color: var(--muted); cursor: pointer; }
 .tab.on { color: var(--accent); box-shadow: inset 0 3px 0 var(--accent); }
+
+/* ホームを詰めて、スクロールせずに見えるようにする（2026-10-28） */
+.now.compact { padding: 18px 20px; }
+.now.compact .stack { gap: 10px; }
+.now.compact .display { font-size: clamp(26px, 4.8vw, 38px); }
+.now.compact .lead { font-size: 17px; }
+.now.compact .btn.primary { min-height: 58px; }
+.items-line { font-size: 15px; color: var(--muted); line-height: 1.7; }
+.items-line .sep { margin: 0 2px; opacity: .6; }
+.row.tight { gap: 8px; }
+.row.tight > * { flex: 1 1 150px; }
+.row.tight .btn { min-height: 48px; font-size: 16px; padding: 8px 12px; }
+.past-toggle { font-size: 14px; }
+
+/* 予定 */
+.chip.imp1 { background: var(--surface-2); color: var(--muted); }
+.chip.imp2 { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent); }
+.chip.imp3 { background: color-mix(in srgb, var(--warn) 20%, var(--surface)); color: var(--warn); }
+.chip.imp4 { background: color-mix(in srgb, var(--bad) 18%, var(--surface)); color: var(--bad); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.plans-card .stack { gap: 12px; }
+.next-plan { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 14px; border: 0; cursor: pointer;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.next-plan .label { flex: 1 0 100%; }
+.next-plan .np-main { font-size: 19px; flex: 1 1 200px; min-width: 0; }
+.next-plan .np-left { font-weight: 700; color: var(--accent); }
+.plan-row .time { width: 64px; }
+.todo-row { align-items: center; flex-wrap: nowrap; }
+.todo-row .body { text-align: left; }
+.linkish { background: none; border: 0; padding: 0; cursor: pointer; flex: 1 1 auto; min-width: 0; }
+.tick { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--muted); background: var(--surface); color: transparent; cursor: pointer; display: grid; place-items: center; font-size: 18px; }
+.tick.on { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.seg { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 4px; background: var(--surface-2); border-radius: 14px; }
+.seg button { border: 0; background: none; border-radius: 10px; min-height: 44px; font-weight: 700; font-size: 16px; color: var(--muted); cursor: pointer; }
+.seg button.on { background: var(--surface); color: var(--accent); box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 15%, transparent); }
+.nav-row { align-items: center; }
+.nav-row > .btn { flex: 0 0 56px; }
+.nav-row > h2 { flex: 1 1 auto; }
+.week-day { padding: 12px 16px; }
+.week-day.is-today, .md.is-today { outline: 2px solid var(--accent); outline-offset: -2px; }
+.month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+.mh { text-align: center; font-size: 13px; font-weight: 700; color: var(--muted); padding: 4px 0; }
+.md { position: relative; min-height: 76px; display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; text-align: left; overflow: hidden; }
+.md.other { opacity: .45; }
+.mdn { font-family: var(--f-num); font-size: 14px; font-weight: 600; }
+.mdt { font-size: 11px; line-height: 1.3; border-radius: 4px; padding: 1px 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--surface-2); }
+.mdt.imp3 { background: color-mix(in srgb, var(--warn) 22%, var(--surface)); }
+.mdt.imp4 { background: color-mix(in srgb, var(--bad) 20%, var(--surface)); }
+.mdt.done { text-decoration: line-through; opacity: .6; }
+.mdm { font-size: 11px; color: var(--muted); }
+.dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+.dot.imp4 { background: var(--bad); }
+.ok-text { color: var(--ok); font-weight: 700; }
+.warn-text { color: var(--warn); font-weight: 700; }
+.leg-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+.leg-edit { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.small-check { font-size: 17px; padding: 10px 14px; }
+.small-check .box { width: 26px; height: 26px; font-size: 15px; }
+ul.plain { margin: 6px 0 0; padding-left: 20px; }
+.daychk { display: inline-flex; align-items: center; gap: 4px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+input[type=date] { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 12px; min-height: 46px; width: 100%; font-size: 17px; }
+@media (max-width: 480px) {
+  .md { min-height: 58px; } .mdt { display: none; } .mdm { display: none; }
+  .tab { font-size: 14px; }
+  .display { font-size: clamp(26px, 8vw, 34px); }
+}
 
 /* 下から出る画面 */
 .sheet-bg { position: fixed; inset: 0; z-index: 10; background: color-mix(in srgb, var(--ink) 40%, transparent); display: flex; align-items: flex-end; justify-content: center; }
@@ -203,10 +269,11 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
 <div id="sheet"></div>
 
 <script src="logic.js" charset="utf-8"></script>
+<script src="plans.js" charset="utf-8"></script>
 <script>
 (function () {
   'use strict';
-  var L = window.DayLogic;
+  var L = window.DayLogic, P = window.DayPlans;
   var KEY = 'ichinichi-preview-v1';
   var MIN = L.MIN;
   // SITE = claude.ai の外に置いた版（ホーム画面に追加して使う）。STANDALONE = ホーム画面のアイコンから開いている
@@ -216,7 +283,7 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
   try { if (SITE && navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {}); } catch (e) {}
 
   // ---------- 保存（このブラウザだけ） ----------
-  function fresh() { return { settings: L.defaultSettings(), days: {}, sessions: [], laundry: L.newLaundry(), subjects: ['簿記論', '財務諸表論', '消費税法'], sim: null, noticeRead: false, installHide: false }; }
+  function fresh() { return { settings: L.defaultSettings(), days: {}, sessions: [], laundry: L.newLaundry(), plans: [], subjects: ['簿記論', '財務諸表論', '消費税法'], sim: null, noticeRead: false, installHide: false }; }
   // 前の版で保存した設定に、あとから増えた項目を足す
   function migrate(d) {
     var def = L.defaultSettings(), s = d.settings;
@@ -235,6 +302,14 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
       d.subjects = d.subjects || [];
       ['簿記論', '財務諸表論', '消費税法'].forEach(function (x) { if (d.subjects.indexOf(x) < 0) d.subjects.push(x); });
     }
+    if ((s.scheduleVersion || 0) < 5) {
+      // 2026-10-28：準備運動は時間に関係なく1分。朝のまとめの通知を足す
+      s.workout.prep = def.workout.prep;
+      if (s.morningSummary == null) s.morningSummary = true;
+      s.scheduleVersion = 5;
+    }
+    // 予定は、公開ページの中には持たない。本人が「予定の取り込み」で、この端末の中だけに入れる
+    d.plans = d.plans || [];
     return d;
   }
   function load() {
@@ -242,7 +317,7 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
       var raw = localStorage.getItem(KEY);
       if (raw) { var d = JSON.parse(raw); if (d && d.settings && d.days) return migrate(d); }
     } catch (e) { /* 読めなくても最初から動く */ }
-    return fresh();
+    return migrate(fresh());
   }
   var D = load();
   function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) { /* 保存できない環境でも動かす */ } pushSoon(); }
@@ -297,7 +372,7 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
     var hadErr = !!PS.err;
     return pushSubscription().then(function (sub) {
       if (!sub) { PS.on = false; PS.lost = true; savePush(); return true; }   // 端末側で通知が外されていた
-      var items = L.pushItems(Date.now(), S(), D, 7), sj = sub.toJSON();
+      var items = P.pushItems(Date.now(), S(), D, 7, location.origin + location.pathname), sj = sub.toJSON();
       var sig = sigOf(sj.endpoint + '|' + items.map(function (x) { return x.id + '@' + x.at + '/' + x.title + '/' + x.body; }).join('|'));
       if (!force && !PS.err && sig === PS.sig && PS.okAt && Date.now() - PS.okAt < 6 * 3600e3) return false;
       return pushApi('/api/sync', { device: PS.device, sub: sj, items: items }).then(function (j) {
@@ -328,13 +403,24 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
   // tab: home / flow / study / workout / settings。route は tab の中の画面（home: curtain など、settings: status）
   var V = { tab: 'home', route: null, flowOffset: 0, flowEdit: null, confirmSkip: null, laundryFull: false, oneCont: false,
     oneLaundryLater: false, subject: null, sheet: null, staleSnooze: 0, confirm: null, noticeOpen: false };
-  var tabsDef = [['home', 'ホーム'], ['flow', '一日'], ['study', '勉強'], ['workout', '運動'], ['settings', '設定']];
+  var tabsDef = [['home', 'ホーム'], ['plans', '予定'], ['flow', '一日'], ['study', '勉強'], ['workout', '運動'], ['settings', '設定']];
+  V.planView = 'today'; V.planDay = null; V.planOpen = null; V.planEdit = null; V.planMsg = null; V.icsUrl = null; V.showPast = false; V.importMsg = null; V.importOk = false;
+  // 通知から開いたとき：#plan=予定&day=日付 → その予定、#today=日付 → その日の一覧
+  function applyHash() {
+    var h = (location.hash || '').replace('#', ''), q = {};
+    h.split('&').forEach(function (kv) { var i = kv.indexOf('='); if (i > 0) q[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); });
+    if (q.plan) { V.tab = 'plans'; V.planEdit = null; V.planOpen = { id: q.plan, day: q.day || null }; V.icsUrl = null; V.planMsg = null; return true; }
+    if (q.today) { V.tab = 'plans'; V.planOpen = null; V.planEdit = null; V.planView = 'today'; V.planDay = q.today; return true; }
+    return false;
+  }
   try {
     var h0 = (location.hash || '').replace('#', '');
     if (tabsDef.some(function (t) { return t[0] === h0; })) V.tab = h0;
     if (h0 === 'status') { V.tab = 'settings'; V.route = 'status'; }
     if (h0 === 'laundry') { V.tab = 'home'; V.route = 'laundry'; }
+    applyHash();
   } catch (e) {}
+  window.addEventListener('hashchange', function () { if (applyHash()) { window.scrollTo(0, 0); render(); } });
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function period(id) { var g = L.INFO[id] ? L.INFO[id].group : 'morning'; return 'period-' + g; }
@@ -547,6 +633,54 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
       var np = nightPartFor(b.dataset.v);
       startStudy(b.dataset.v, np ? np.subject : selectedSubject(), ''); render();
     },
+    // ---- 予定 ----
+    showPast: function () { V.showPast = !V.showPast; render(); },
+    planView: function (b) { V.tab = 'plans'; V.planView = b.dataset.v; V.planOpen = null; V.planEdit = null; V.icsUrl = null; V.planMsg = null; if (!V.planDay || b.dataset.v === 'today') V.planDay = today(); window.scrollTo(0, 0); render(); },
+    planShift: function (b) {
+      var d = V.planDay || today(), k = Number(b.dataset.v), u = b.dataset.unit;
+      if (u === 'month') { var a = d.split('-').map(Number), m = a[1] - 1 + k, y = a[0] + Math.floor(m / 12); m = ((m % 12) + 12) % 12; d = y + '-' + L.pad(m + 1) + '-01'; }
+      else d = L.addDays(d, u === 'week' ? 7 * k : k);
+      V.planDay = d; render();
+    },
+    planGoDay: function (b) { V.planDay = b.dataset.day; V.planView = b.dataset.v || 'day'; V.planOpen = null; render(); },
+    planOpen: function (b) { V.tab = 'plans'; V.planOpen = { id: b.dataset.id, day: b.dataset.day }; V.planEdit = null; V.icsUrl = null; V.planMsg = null; V.confirm = null; window.scrollTo(0, 0); render(); },
+    planClose: function () { V.planOpen = null; V.icsUrl = null; V.planMsg = null; V.confirm = null; try { if (/plan=|today=/.test(location.hash)) history.replaceState(null, '', '#plans'); } catch (e) {} render(); },
+    planNew: function (b) { V.tab = 'plans'; V.planOpen = null; V.planMsg = null; V.planEdit = Object.assign(P.blank(b.dataset.day || (V.planView === 'day' && V.planDay) || today(), b.dataset.v === 'todo' ? 'todo' : 'other'), { isNew: true }); window.scrollTo(0, 0); render(); },
+    planEdit: function (b) { var p = findPlan(b.dataset.id); if (!p) return; V.planEdit = JSON.parse(JSON.stringify(p)); V.planMsg = null; window.scrollTo(0, 0); render(); },
+    planEditCancel: function () { V.planEdit = null; V.planMsg = null; render(); },
+    planSave: function () { savePlanDraft(); },
+    planLegAdd: function () { var e = readEditor(); e.legs.push({ id: P.newId('g'), name: '', from: '', to: '', dep: null, arr: null, how: '', move: 10, verified: false }); render(); },
+    planLegDel: function (b) { var e = readEditor(); e.legs.splice(Number(b.dataset.v), 1); render(); },
+    planDone: function (b) {
+      var p = findPlan(b.dataset.id), day = b.dataset.day; if (!p) return;
+      if (P.isRepeating(p)) { p.doneDates = p.doneDates || {}; if (p.doneDates[day]) delete p.doneDates[day]; else p.doneDates[day] = Date.now(); }
+      else { p.status = p.status === 'done' ? 'open' : 'done'; p.doneAt = p.status === 'done' ? Date.now() : null; }
+      V.planMsg = P.isDone(p, day) ? '完了にしました。残りの通知は取り消します' : '未完了に戻しました'; save(); render();
+    },
+    planAck: function (b) { var p = findPlan(b.dataset.id); if (!p) return; p.acks = p.acks || {}; p.acks[b.dataset.day + '.main'] = Date.now(); p.acks[b.dataset.day + '.wake'] = Date.now(); V.planMsg = '確認しました。鳴らし直しを止めます'; save(); render(); },
+    planSnooze: function (b) { var p = findPlan(b.dataset.id); if (!p) return; var m = Number(b.dataset.v) || 5; var at = now() + m * MIN; p.snoozes = (p.snoozes || []).filter(function (x) { return x.at > now(); }); p.snoozes.push({ day: b.dataset.day, at: at }); V.planMsg = m + '分後にもう一度知らせます（' + L.fmtTime(at) + '）'; save(); render(); },
+    planPostpone: function (b) {
+      var p = findPlan(b.dataset.id), day = b.dataset.day; if (!p) return;
+      var next = L.addDays(day, 1);
+      if (P.isRepeating(p)) { p.skipDates = (p.skipDates || []).concat([day]); var c = JSON.parse(JSON.stringify(p)); c.id = P.newId('p'); c.date = next; c.repeat = { freq: 'none' }; c.doneDates = {}; c.skipDates = []; c.acks = {}; c.snoozes = []; plans().push(c); V.planOpen = { id: c.id, day: next }; }
+      else { p.date = next; p.acks = {}; p.snoozes = []; V.planOpen = { id: p.id, day: next }; }
+      V.planMsg = '明日（' + L.shortLabel(next) + '）に延期しました。通知も入れ替えます'; save(); render();
+    },
+    planDelAsk: function () { V.confirm = 'planDel'; render(); },
+    planDelete: function (b) { D.plans = plans().filter(function (x) { return x.id !== b.dataset.id; }); V.confirm = null; V.planOpen = null; save(); render(); },
+    planCancel: function (b) { var p = findPlan(b.dataset.id); if (p) p.status = 'cancelled'; V.confirm = null; V.planMsg = '中止にしました。通知は届きません'; save(); render(); },
+    planDelOne: function (b) { var p = findPlan(b.dataset.id); if (p) p.skipDates = (p.skipDates || []).concat([b.dataset.day]); V.confirm = null; V.planOpen = null; save(); render(); },
+    planCheck: function (b) { var p = findPlan(b.dataset.id); if (!p) return; (p[b.dataset.list] || []).forEach(function (c) { if (c.id === b.dataset.item) c.done = !c.done; }); save(); render(); },
+    planLegVerify: function (b) { var p = findPlan(b.dataset.id); if (!p) return; (p.legs || []).forEach(function (g) { if (g.id === b.dataset.leg) g.verified = !g.verified; }); save(); render(); },
+    planIcs: function (b) { planIcs(b); },
+    plansImport: function () { var el = document.getElementById('import-text'); runImport(el ? el.value : ''); },
+    // iPhone では、押すと「ペースト」の確認が出る
+    plansImportClip: function () {
+      try {
+        navigator.clipboard.readText().then(runImport, function () { V.importMsg = 'コピーした文字を読めませんでした。下の欄に貼り付けて「取り込む」を押してください'; V.importOk = false; render(); });
+      } catch (e) { V.importMsg = 'この画面では、下の欄に貼り付けて「取り込む」を押してください'; V.importOk = false; render(); }
+    },
+    routineOff: function (b) { var ds = dayState(b.dataset.day); ds.routineOff = !ds.routineOff; save(); render(); },
     // 土曜が出勤か休みかを選ぶ（選び直すときは v を空にする）
     dayType: function (b) { dayState(b.dataset.day).dayType = b.dataset.v || null; save(); render(); },
     studyCont: function (b) { var c = findSession(b.dataset.id); startStudy(b.dataset.v, c ? c.subject : '', c ? c.material : ''); render(); },
@@ -775,13 +909,11 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
       '<button class="btn primary" data-a="medStart" data-v="ext" style="background:var(--night)">ここから' + ext + '分 瞑想する</button>';
   }
 
+  // チェック項目は1行にまとめて見せ、「完了」1回で済ませる（2026-10-28 本人の希望：慣れたので1つずつ押さなくてよい）
   function checklistItems(id) {
-    var info = L.INFO[id], r = L.rec(dayState(today()), id), h = '';
-    info.checklist.forEach(function (item) {
-      var on = r.checks.indexOf(item) >= 0 || r.status === 'done';
-      h += '<button class="check' + (on ? ' on' : '') + '" data-a="check" data-v="' + id + '" data-item="' + esc(item) + '" aria-pressed="' + on + '"><span class="box">✓</span><span class="txt">' + esc(item) + '</span></button>';
-    });
-    if (r.status === 'pending') h += '<button class="btn primary" data-a="done" data-v="' + id + '">ぜんぶ済んだ</button>';
+    var info = L.INFO[id], r = L.rec(dayState(today()), id);
+    var h = '<p class="items-line">' + info.checklist.map(esc).join('<span class="sep">・</span>') + '</p>';
+    if (r.status === 'pending') h += '<button class="btn primary" data-a="done" data-v="' + id + '">完了</button>';
     return h;
   }
 
@@ -862,11 +994,15 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
   }
 
   function todayCard(sn, n) {
-    var cur = sn.current ? sn.current.id : null;
-    return '<section class="card"><span class="label">今日の流れ（行を押すとその画面へ）</span><div class="list compact">' + sn.steps.map(function (st) {
+    var cur = sn.current ? sn.current.id : null, hidden = 0;
+    var rows = sn.steps.map(function (st) {
       var p = L.phase(st, n), dim = p === 'done' || p === 'skipped' || p === 'missed';
+      if (dim && !V.showPast && st.id !== cur) { hidden++; return ''; }
       return '<button class="li' + (dim ? ' past' : '') + (st.id === cur ? ' now-row' : '') + '" data-a="go" data-v="' + st.route + '"><span class="time">' + L.todText(st.setting.time) + '</span><span class="body">' + esc(st.title) + '</span><span class="end">' + phaseChip(st, cur, n) + '</span></button>';
-    }).join('') + '</div></section>';
+    }).join('');
+    return '<section class="card"><span class="label">今日の流れ（行を押すとその画面へ）</span>' +
+      (hidden || V.showPast ? '<button class="linkbtn past-toggle" data-a="showPast">' + (V.showPast ? '済んだ行をたたむ' : '済んだ・過ぎた ' + hidden + '件を表示') + '</button>' : '') +
+      '<div class="list compact">' + rows + '</div></section>';
   }
 
   function homeView() {
@@ -887,30 +1023,31 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
       out.push('<button class="banner" data-a="tab" data-v="settings"><span>通知の予約を更新できていません。通信を確認してください</span><b>設定へ</b></button>');
     }
     out.push(dayTypeBanner());
+    out.push(routineOffBanner());
     if (st) out.push(staleCard(st));
-    if (sn.rest) out.push('<div class="banner ok"><span>今日は運動・勉強はお休みの日です</span></div>');
+    if (sn.rest && !dayState(today()).routineOff) out.push('<div class="banner ok"><span>今日は運動・勉強はお休みの日です</span></div>');
     var ls = L.laundryStatus(D.laundry, n);
     if (ls.active) out.push('<button class="banner info" data-a="go" data-v="laundry"><span>洗濯：' + esc(ls.label) + '</span><b>洗濯の画面へ</b></button>');
     if (sn.current) {
       var c = sn.current;
-      out.push('<section class="card now ' + period(c.id) + '"><div class="stack">' +
-        '<span class="label">今すること・' + periodLabel(c.id) + '</span>' +
+      out.push('<section class="card now compact ' + period(c.id) + '"><div class="stack">' +
+        '<span class="label">今すること・' + periodLabel(c.id) + '　<span class="num">' + timeHint(c) + '</span></span>' +
         '<h1 class="display">' + esc(c.title) + '</h1>' +
         '<p class="lead">' + esc(c.guidance) + '</p>' +
-        '<p class="muted num" style="font-size:18px">' + timeHint(c) + '</p>' +
         nowActions(c) +
         (V.confirmSkip === c.id
           ? '<div class="banner"><span>「' + esc(c.title) + '」を今日は省略しますか？ 省略しても明日の量は増えません。</span><button class="btn danger" data-a="skip" data-v="' + c.id + '">省略する</button><button class="btn" data-a="cancelSkip">やめる</button></div>'
-          : (act[c.id] ? '' : '<div class="row"><button class="btn" data-a="later" data-v="' + c.id + '">あとで（' + S().laterMinutes + '分）</button><button class="btn" data-a="askSkip" data-v="' + c.id + '">今日は省略</button></div>')) +
+          : (act[c.id] ? '' : '<div class="row tight"><button class="btn" data-a="later" data-v="' + c.id + '">あとで（' + S().laterMinutes + '分）</button><button class="btn" data-a="askSkip" data-v="' + c.id + '">今日は省略</button></div>')) +
         '</div></section>');
-    } else {
+    } else if (!dayState(today()).routineOff) {
       out.push('<section class="card"><span class="label">今すること</span><h2 class="display" style="font-size:clamp(26px,5vw,38px)">' + esc(sn.idle) + '</h2></section>');
     }
     if (sn.next) {
       var nt = sn.next.rec.laterUntil && sn.next.rec.laterUntil > n ? sn.next.rec.laterUntil : Math.max(sn.next.available, n);
       out.push('<section class="card next"><div><span class="label">次にすること</span><h2>' + esc(sn.next.title) + '</h2></div><span class="t">' + L.fmtTime(nt) + '</span></section>');
     }
-    out.push(todayCard(sn, n));
+    out.push(homePlansCard());
+    if (sn.steps.length) out.push(todayCard(sn, n));
     out.push(scheduleCard());
     return '<div class="stack" style="margin-top:16px">' + out.join('') + '</div>';
   }
@@ -930,7 +1067,9 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
   }
 
   function scheduleCard() {
-    var list = L.scheduleFor(now(), S(), D), web = !!PUSH, on = pushOn();
+    var web = !!PUSH, on = pushOn(), t0 = today();
+    // Web版：毎日の流れの知らせに、予定と朝のまとめの知らせも合わせて出す
+    var list = web ? P.pushItems(now(), S(), D, 1, '').filter(function (x) { return L.dayKey(x.at) === t0; }) : L.scheduleFor(now(), S(), D);
     var head = !web ? '本番アプリが今日このあと知らせるもの' : on ? '今日このあと届く通知' : '通知をオンにすると、今日このあと届くもの';
     var note = !web ? '試用版では鳴りません。iPad アプリでは、アラームは AlarmKit、それ以外はローカル通知で知らせます。'
       : on ? 'プッシュ通知で届きます（通信が必要・音は1回）。' + (D.sim ? '「時刻を試す」の間は、実際には届きません。' : '')
@@ -1264,6 +1403,8 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
         num('間隔（分）', pIv, iv, 1, 10) + num('回数', pCt, ct, 0, 10) + '</div></div>';
     });
     h += '</section>';
+    h += '<section class="card"><div class="stack"><span class="label">朝のまとめ</span><label class="toggle"><input type="checkbox" id="ms-on"' + (s.morningSummary !== false ? ' checked' : '') + ' data-s="morningSummary">毎朝 8:00 に「今日の予定・やること・勉強・運動・注意事項」を通知する</label>' +
+      '<p class="small muted">8:45 より前に出発・開始する予定がある日は、その45分前に早めます。通知を押すと、今日の一覧が開きます。</p></div></section>';
     h += '<section class="card"><span class="label">そのほか</span><div class="set-grid" style="margin-top:10px">' +
       num('「あとで」（分）', 'laterMinutes', s.laterMinutes, 5, 60) + num('出発の何分前に知らせる', 'departureWarn', s.departureWarn, 0, 30) +
       num('洗濯の予定所要時間（分）', 'laundry.duration', s.laundry.duration, 10, 180) + num('「まだ」のあと再通知（分）', 'laundry.reNotify', s.laundry.reNotify, 5, 60) +
@@ -1453,6 +1594,331 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
   function fieldT(k, label, v, ph) { return '<div class="field"><label for="f-' + k + '">' + label + '</label><input type="text" id="f-' + k + '" value="' + esc(v) + '"' + (ph ? ' placeholder="' + ph + '"' : '') + '></div>'; }
   function fieldA(k, label, v, ph) { return '<div class="field"><label for="f-' + k + '">' + label + '</label><textarea id="f-' + k + '" placeholder="' + ph + '">' + esc(v) + '</textarea></div>'; }
 
+  // =========================================================
+  // 予定・ToDo（2026-10-28 追加）。計算は plans.js（DayPlans）、ここは画面と操作
+  // =========================================================
+  function plans() { if (!D.plans) D.plans = []; return D.plans; }
+  function findPlan(id) { var a = plans(); for (var i = 0; i < a.length; i++) if (a[i].id === id) return a[i]; return null; }
+  function impChip(p) { var i = p.importance || 2; return '<span class="chip imp' + i + '">' + P.IMP[i] + '</span>'; }
+  function remainText(ms) {
+    var m = Math.max(0, Math.round(ms / MIN)), h = Math.floor(m / 60);
+    return h >= 24 ? Math.floor(h / 24) + '日' + (h % 24) + '時間' : h > 0 ? h + '時間' + (m % 60) + '分' : m + '分';
+  }
+  function dayWord(day) { var t = today(); return day === t ? '今日' : day === L.addDays(t, 1) ? '明日' : L.shortLabel(day) + '（' + L.WD[L.weekday(day)] + '）'; }
+  // 一覧の1行。時刻（出発→開始）・題・場所・状態
+  function planRow(x, opts) {
+    opts = opts || {};
+    var p = x.p, t = x.t, time;
+    if (x.cont) time = '前日から';
+    else if (t.base == null) time = p.todo ? 'ToDo' : '未定';
+    else time = L.fmtTime(t.depart != null ? t.depart : t.start);
+    var sub = [];
+    if (!x.cont && t.depart != null) sub.push(L.fmtTime(t.depart) + ' 出発' + (t.start != null ? ' → ' + L.fmtTime(t.start) + ' 開始' : ''));
+    if (p.place) sub.push(p.place);
+    var unv = (p.legs || []).filter(function (g) { return !g.verified && g.dep != null; }).length;
+    if (unv) sub.push('列車の時刻 未確認 ' + unv + '件');
+    var open = (p.confirm || []).filter(function (c) { return !c.done; }).length;
+    if (open) sub.push('確認事項 ' + open + '件');
+    var st = x.done ? '<span class="chip ok">完了</span>' : p.status === 'cancelled' ? '<span class="chip">中止</span>' : impChip(p);
+    return '<button class="li plan-row' + (x.done ? ' past' : '') + '" data-a="planOpen" data-id="' + esc(p.id) + '" data-day="' + x.day + '">' +
+      '<span class="time">' + time + '</span><span class="body">' + (opts.day ? '<span class="small muted">' + dayWord(x.day) + '</span> ' : '') +
+      (p.tentative ? '<span class="chip">仮</span> ' : '') + esc(p.title) + (sub.length ? '<br><span class="small muted">' + esc(sub.join('・')) + '</span>' : '') + '</span>' +
+      '<span class="end">' + st + '</span></button>';
+  }
+  function todoRow(p, day) {
+    var done = P.isDone(p, day);
+    return '<div class="li todo-row' + (done ? ' past' : '') + '"><button class="tick' + (done ? ' on' : '') + '" data-a="planDone" data-id="' + esc(p.id) + '" data-day="' + day + '" aria-pressed="' + done + '" aria-label="完了"><span>✓</span></button>' +
+      '<button class="body linkish" data-a="planOpen" data-id="' + esc(p.id) + '" data-day="' + day + '">' + esc(p.title) +
+      '<br><span class="small muted">' + (p.date ? (p.date < today() ? L.shortLabel(p.date) + 'から' : dayWord(p.date)) : '期限なし') + (p.time != null ? ' ' + L.todText(p.time) : '') + '</span></button>' +
+      '<span class="end">' + impChip(p) + '</span></div>';
+  }
+
+  // ---- ホームに出す「予定」 ----
+  function homePlansCard() {
+    var n = now(), t = today(), all = plans(), h = '';
+    var nx = P.nextUp(all, n), list = P.dayPlans(all, t).filter(function (x) { return !x.p.todo; });
+    var imp = P.importantOpen(all, t), r = P.routineOf(t, S(), D);
+    var tom = P.dayPlans(all, L.addDays(t, 1)).filter(function (x) { return !x.cont && !x.done && !x.p.todo && (x.p.importance || 2) >= 3; });
+    h += '<section class="card plans-card"><div class="stack">';
+    h += nx ? '<button class="next-plan" data-a="planOpen" data-id="' + esc(nx.p.id) + '" data-day="' + nx.day + '"><span class="label">次の予定</span>' +
+        '<span class="np-main"><b class="num">' + (nx.day === t ? '' : '明日 ') + L.fmtTime(nx.at) + '</b> ' + esc(nx.what) + '・' + esc(nx.p.title) + '</span>' +
+        '<span class="np-left num">あと' + remainText(nx.at - n) + '</span></button>'
+      : '<p class="muted">今日と明日は、時刻の決まった予定はありません</p>';
+    h += '<div><span class="label">今日の予定</span>' + (list.length ? '<div class="list compact">' + list.map(function (x) { return planRow(x); }).join('') + '</div>' : '<p class="small muted">なし</p>') + '</div>';
+    if (imp.length) h += '<div><span class="label">未完了の重要なこと</span><div class="list compact">' + imp.slice(0, 4).map(function (p) { return todoRow(p, P.isRepeating(p) ? t : (p.date || t)); }).join('') + '</div></div>';
+    if (tom.length) h += '<div><span class="label">明日の重要な予定</span><div class="list compact">' + tom.map(function (x) { return planRow(x); }).join('') + '</div></div>';
+    h += '<p class="small"><b>勉強</b> ' + esc(r.off ? 'お休み（予定を優先する日）' : r.study.filter(function (x) { return /^2\d:/.test(x); }).map(function (x) { return x.replace(/^\d+:\d+ /, ''); }).join(' → ') || 'なし') +
+      '<br><b>運動</b> ' + esc(r.off ? 'お休み' : r.exercise || 'なし') + '</p>';
+    h += '<div class="row tight"><button class="btn" data-a="planView" data-v="today">今日の一覧</button><button class="btn" data-a="planNew" data-v="other">＋ 予定を追加</button></div>';
+    return h + '</div></section>';
+  }
+  // 予定を優先して、毎日の流れを休む日
+  function routineOffBanner() {
+    var t = today(), ds = dayState(t);
+    return ds.routineOff ? '<div class="banner info"><span>今日は予定を優先して、毎日の流れ（起床〜勉強の知らせ）を休む日です</span><button class="btn" data-a="routineOff" data-day="' + t + '">毎日の流れに戻す</button></div>' : '';
+  }
+
+  // ---- 予定のタブ ----
+  function plansView() {
+    if (V.planEdit) return planEditor();
+    if (V.planOpen) { var op = findPlan(V.planOpen.id); if (op) return planDetail(op, V.planOpen.day || op.date || today()); V.planOpen = null; }
+    var view = V.planView || 'today', day = V.planDay || today();
+    var tabs = [['today', '今日'], ['day', '日'], ['week', '週'], ['month', '月'], ['todo', 'ToDo']];
+    var h = '<div class="stack" style="margin-top:16px"><div class="seg" role="tablist">' + tabs.map(function (x) {
+      return '<button class="' + (view === x[0] ? 'on' : '') + '" data-a="planView" data-v="' + x[0] + '" aria-pressed="' + (view === x[0]) + '">' + x[1] + '</button>';
+    }).join('') + '</div>';
+    if (view === 'today') h += planToday(V.planDay && V.planView === 'today' ? V.planDay : today());
+    else if (view === 'day') h += planDayView(day);
+    else if (view === 'week') h += planWeekView(day);
+    else if (view === 'month') h += planMonthView(day);
+    else h += planTodoView();
+    h += '<button class="btn primary" data-a="planNew" data-v="other">＋ 予定・ToDo を追加</button>';
+    h += importCard(!plans().length || !!V.importMsg);
+    h += planLimitsCard();
+    return h + '</div>';
+  }
+  // 今日：朝のまとめと同じ中身
+  function planToday(day) {
+    var m = P.morning(day, plans(), S(), D), list = P.dayPlans(plans(), day), todos = P.todosFor(plans(), day), h = '';
+    h += '<h1 class="display" style="font-size:clamp(26px,5vw,36px)">' + dayWord(day) + 'の予定</h1>';
+    h += '<p class="small muted">朝のまとめの通知：' + (S().morningSummary === false ? '止めています（設定）' : L.fmtTime(m.at)) + '。8:45 より前に出発する日は早めます。</p>';
+    h += '<section class="card"><span class="label">予定</span>' + (list.filter(function (x) { return !x.p.todo; }).length ? '<div class="list">' + list.filter(function (x) { return !x.p.todo; }).map(function (x) { return planRow(x); }).join('') + '</div>' : '<p class="muted">なし</p>') + '</section>';
+    h += '<section class="card"><span class="label">やること（重要な順）</span>' + (todos.length ? '<div class="list">' + todos.map(function (p) { return todoRow(p, day); }).join('') + '</div>' : '<p class="muted">なし</p>') + '</section>';
+    m.sections.forEach(function (s) {
+      if (s.key === 'plans' || s.key === 'todo') return;
+      h += '<section class="card"><span class="label">' + s.title + '</span>' + (s.lines.length ? '<ul class="plain">' + s.lines.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<p class="muted">なし</p>') + '</section>';
+    });
+    return h;
+  }
+  function dayNav(day, unit, labelText) {
+    return '<div class="row nav-row"><button class="btn" data-a="planShift" data-v="-1" data-unit="' + unit + '" aria-label="前へ">←</button>' +
+      '<h2 style="text-align:center">' + labelText + '</h2><button class="btn" data-a="planShift" data-v="1" data-unit="' + unit + '" aria-label="次へ">→</button></div>' +
+      (day !== today() ? '<button class="linkbtn" data-a="planGoDay" data-day="' + today() + '" data-v="' + (V.planView || 'day') + '">今日に戻る</button>' : '');
+  }
+  function planDayView(day) {
+    var list = P.dayPlans(plans(), day), ds = dayState(day), h = dayNav(day, 'day', L.dayLabel(day));
+    h += '<label class="toggle"><input type="checkbox" data-a="routineOff" data-day="' + day + '"' + (ds.routineOff ? ' checked' : '') + '>この日は予定を優先して、毎日の流れ（起床〜勉強の知らせ）を休む</label>';
+    h += '<section class="card">' + (list.length ? '<div class="list">' + list.map(function (x) { return planRow(x); }).join('') + '</div>' : '<p class="muted">予定はありません</p>') + '</section>';
+    return h + '<button class="btn" data-a="planNew" data-v="other" data-day="' + day + '">＋ この日に追加</button>';
+  }
+  function planWeekView(day) {
+    var ws = L.weekStart(day), h = dayNav(day, 'week', L.shortLabel(ws) + '〜' + L.shortLabel(L.addDays(ws, 6)));
+    for (var i = 0; i < 7; i++) {
+      var d = L.addDays(ws, i), list = P.dayPlans(plans(), d), off = dayState(d).routineOff;
+      h += '<section class="card week-day' + (d === today() ? ' is-today' : '') + '"><button class="linkbtn" data-a="planGoDay" data-day="' + d + '" data-v="day"><b>' + L.dayLabel(d) + '</b>' + (off ? '<span class="chip">流れを休む</span>' : '') + '</button>' +
+        (list.length ? '<div class="list compact">' + list.map(function (x) { return planRow(x); }).join('') + '</div>' : '<p class="small muted">予定なし</p>') + '</section>';
+    }
+    return h;
+  }
+  function planMonthView(day) {
+    var a = day.split('-').map(Number), first = a[0] + '-' + L.pad(a[1]) + '-01', start = L.weekStart(first), h = dayNav(day, 'month', a[0] + '年' + a[1] + '月');
+    h += '<div class="month"><div class="mh">月</div><div class="mh">火</div><div class="mh">水</div><div class="mh">木</div><div class="mh">金</div><div class="mh">土</div><div class="mh">日</div>';
+    for (var i = 0; i < 42; i++) {
+      var d = L.addDays(start, i), dd = d.split('-').map(Number), list = P.dayPlans(plans(), d).filter(function (x) { return !x.cont; });
+      if (i % 7 === 0 && i >= 28 && dd[1] !== a[1]) break;
+      var top = Math.max.apply(null, [0].concat(list.map(function (x) { return x.done ? 0 : x.p.importance || 2; })));
+      h += '<button class="md' + (dd[1] !== a[1] ? ' other' : '') + (d === today() ? ' is-today' : '') + '" data-a="planGoDay" data-day="' + d + '" data-v="day" aria-label="' + L.dayLabel(d) + '、予定' + list.length + '件">' +
+        '<span class="mdn">' + dd[2] + '</span>' + list.slice(0, 2).map(function (x) { return '<span class="mdt imp' + (x.p.importance || 2) + (x.done ? ' done' : '') + '">' + esc(x.p.title) + '</span>'; }).join('') +
+        (list.length > 2 ? '<span class="mdm">ほか' + (list.length - 2) + '</span>' : '') + (top >= 3 ? '<span class="dot imp' + top + '"></span>' : '') + '</button>';
+    }
+    return h + '</div>';
+  }
+  function planTodoView() {
+    var t = today(), all = plans().filter(function (p) { return p.todo && p.status !== 'cancelled'; });
+    var open = all.filter(function (p) { return !P.isDone(p, P.isRepeating(p) ? t : (p.date || t)); }).sort(function (a, b) { return (b.importance || 2) - (a.importance || 2) || String(a.date || '9').localeCompare(String(b.date || '9')); });
+    var done = all.filter(function (p) { return open.indexOf(p) < 0; });
+    var h = '<section class="card"><span class="label">まだのこと（重要な順）</span>' + (open.length ? '<div class="list">' + open.map(function (p) { return todoRow(p, P.isRepeating(p) ? t : (p.date || t)); }).join('') + '</div>' : '<p class="muted">ありません</p>') + '</section>';
+    if (done.length) h += '<details class="card"><summary>済んだこと（' + done.length + '件）</summary><div class="list">' + done.map(function (p) { return todoRow(p, p.date || t); }).join('') + '</div></details>';
+    return h;
+  }
+  // 予定の取り込み：別に渡した文字を貼り付けて、この端末の中だけに入れる
+  function importCard(open) {
+    return '<details class="card"' + (open ? ' open' : '') + '><summary>予定の取り込み（貼り付け）</summary><div class="stack" style="margin-top:10px">' +
+      '<p class="small">別に受け取った「取り込み用の文字」を貼り付けて、「取り込む」を押します。予定はこの端末の中だけに保存され、公開ページには載りません。同じ予定がすでにあるときは、重ねて入れません。</p>' +
+      (V.importMsg ? '<div class="banner' + (V.importOk ? ' ok' : '') + '"><span>' + esc(V.importMsg) + '</span></div>' : '') +
+      '<button class="btn" data-a="plansImportClip">コピーした文字をそのまま取り込む</button>' +
+      '<div class="field"><label class="small muted" for="import-text">または、ここに貼り付ける</label><textarea id="import-text" style="min-height:120px" placeholder="{&quot;app&quot;:&quot;ichinichi-plans&quot;, …}"></textarea></div>' +
+      '<button class="btn primary" data-a="plansImport">取り込む</button></div></details>';
+  }
+  function runImport(text) {
+    var b = P.parseBundle(text);
+    if (b.error) { V.importMsg = b.error; V.importOk = false; render(); return; }
+    var r = P.importInto(D, b);
+    V.importMsg = '取り込みました：新しい予定 ' + r.added + '件' + (r.skipped ? '（すでにあった ' + r.skipped + '件はそのまま）' : '') + '。通知も入れ直します。';
+    V.importOk = true; save(); render();
+  }
+
+  // 通知でできること・できないこと（iPhone・iPad の決まり）
+  function planLimitsCard() {
+    return '<details class="card"><summary>通知でできること・できないこと</summary><div class="stack" style="margin-top:10px">' +
+      '<p>できる：予定ごとに、前日20:00・4時間前・30分前・出発（開始）の時刻に通知。重要な予定は、アプリで「確認」を押すまで5分おきに鳴らし直す。通知を押すと、その予定の画面が開く。5分後・10分後のスヌーズ、完了・延期は予定の画面のボタンで。</p>' +
+      '<p>できない（ホーム画面に追加した Web アプリの決まり）：止めるまで鳴り続けるアラーム、重要度ごとの音の変更、バイブレーションの指定、通知の上の「完了」「延期」のボタン、通信がないときの通知。消音・集中モードの間は鳴りません。</p>' +
+      '<p>確実に鳴らしたい予定は、予定の画面の「iPhone のカレンダーにも入れる」を使うか、「時計」アプリのアラームを併用してください。カレンダーの通知は端末の中で鳴るので、通信がなくても届きます（iPhone での動作は未確認）。</p></div></details>';
+  }
+
+  // ---- 予定の画面 ----
+  function planDetail(p, day) {
+    var t = P.timesOf(p, day), n = now(), done = P.isDone(p, day), notices = P.notices(p, day).filter(function (x) { return x.at > n; });
+    var h = '<div class="stack" style="margin-top:16px"><button class="linkbtn" style="align-self:flex-start" data-a="planClose">← 予定の一覧へ</button>';
+    h += '<div class="chips">' + '<span class="chip">' + esc(P.KIND[p.kind] || 'その他') + '</span>' + impChip(p) + (p.tentative ? '<span class="chip cur">仮の予定</span>' : '') +
+      (t.base == null && !p.todo ? '<span class="chip cur">時間未定</span>' : '') + (done ? '<span class="chip ok">完了</span>' : '') + (p.status === 'cancelled' ? '<span class="chip">中止</span>' : '') + '</div>';
+    h += '<h1 class="display" style="font-size:clamp(26px,5vw,38px)">' + esc(p.title) + '</h1>';
+    var when = L.dayLabel(day) + ' ' + (t.start != null ? L.fmtTime(t.start) + (t.end != null ? '〜' + L.fmtTime(t.end) : '') : p.todo ? '（時刻なし）' : '時間未定');
+    h += '<p class="lead">' + esc(when) + '</p>';
+    if (t.depart != null) h += '<p class="lead"><b class="num">' + L.fmtTime(t.depart) + '</b> 出発' + (p.departFrom ? '（' + esc(p.departFrom) + 'から）' : '') + (p.transport ? '・' + esc(P.TRANSPORT[p.transport] || p.transport) : '') +
+      (t.depart > n && day === today() ? '<span class="muted">　あと' + remainText(t.depart - n) + '</span>' : '') + '</p>';
+    if (p.place || p.address) {
+      var dest = p.address || p.place;
+      h += '<section class="card"><div class="stack"><span class="label">場所</span><p>' + esc(p.place) + (p.address ? '<br><span class="muted">' + esc(p.address) + '</span>' : '') + '</p>' +
+        '<div class="row tight"><a class="btn" href="' + esc(P.mapUrl(dest)) + '" target="_blank" rel="noopener">地図で開く</a>' +
+        '<a class="btn" href="' + esc(P.routeUrl(p.departFrom && !/職場|自宅/.test(p.departFrom) ? p.departFrom : '', dest, p.transport)) + '" target="_blank" rel="noopener">経路（マップ）</a>' +
+        '<a class="btn" href="' + esc(P.googleRouteUrl('', dest, p.transport)) + '" target="_blank" rel="noopener">経路（Google）</a></div>' +
+        '<p class="small muted">道の混み具合や所要時間は、地図アプリで確かめてください（このアプリでは調べていません）。</p></div></section>';
+    }
+    if (p.memo) h += '<section class="card"><span class="label">メモ</span><p>' + esc(p.memo).replace(/\n/g, '<br>') + '</p></section>';
+    if (p.items && p.items.length) h += '<section class="card"><span class="label">持ち物</span><p class="items-line">' + p.items.map(esc).join('<span class="sep">・</span>') + '</p></section>';
+    h += checkCard(p, 'confirm', '確認事項（まだ確かめていないこと）') + checkCard(p, 'checklist', p.kind === 'bank' ? '契約できたら確かめること' : 'チェックリスト');
+    if (p.legs && p.legs.length) {
+      h += '<section class="card"><span class="label">移動（列車など）</span><div class="list">' + p.legs.map(function (g) {
+        return '<div class="li leg"><span class="time">' + P.hm(g.dep) + '</span><span class="body"><b>' + esc(g.name || '移動') + '</b>　' + esc(g.from || '') + ' → ' + esc(g.to || '') + (g.arr != null ? '（' + P.hm(g.arr) + '着）' : '') +
+          (g.how ? '<br><span class="small">' + esc(g.how) + '</span>' : '') +
+          '<br><span class="small ' + (g.verified ? 'ok-text' : 'warn-text') + '">' + (g.verified ? '時刻は確認済み' : '時刻は目安（未確認）') + '</span>' +
+          '<span class="leg-btns"><a class="linkbtn" href="' + esc(P.transitUrl(g.from, g.to, day, g.dep)) + '" target="_blank" rel="noopener">乗換案内で確かめる</a>' +
+          '<button class="linkbtn" data-a="planLegVerify" data-id="' + esc(p.id) + '" data-leg="' + esc(g.id) + '">' + (g.verified ? '未確認に戻す' : '確認済みにする') + '</button></span></span></div>';
+      }).join('') + '</div><p class="small muted">「確認済み」にするまで、通知には「目安・未確認」と出します。時刻が違っていたら「編集」で直してください。</p></section>';
+    }
+    h += '<section class="card"><span class="label">この予定の知らせ（' + notices.length + '件）</span>' + (notices.length ? '<div class="list compact">' + notices.map(function (x) {
+      return '<div class="li"><span class="time" style="width:auto">' + (L.dayKey(x.at) === day ? '' : L.shortLabel(L.dayKey(x.at)) + ' ') + L.fmtTime(x.at) + '</span><span class="body">' + esc(x.title) + '</span></div>';
+    }).join('') + '</div>' : '<p class="small muted">このあと知らせるものはありません</p>') +
+      (pushOn() ? '' : '<p class="small warn-text">通知がオフです。設定で「通知を許可する」を押すと届きます。</p>') + '</section>';
+    // 操作
+    var acted = V.planMsg ? '<div class="banner ok"><span>' + esc(V.planMsg) + '</span></div>' : '';
+    h += acted + '<div class="row tight">' +
+      (done ? '<button class="btn" data-a="planDone" data-id="' + esc(p.id) + '" data-day="' + day + '">未完了に戻す</button>' : '<button class="btn go" data-a="planDone" data-id="' + esc(p.id) + '" data-day="' + day + '">完了</button>') +
+      '<button class="btn" data-a="planAck" data-id="' + esc(p.id) + '" data-day="' + day + '">確認（鳴らし直しを止める）</button></div>' +
+      '<div class="row tight"><button class="btn" data-a="planSnooze" data-id="' + esc(p.id) + '" data-day="' + day + '" data-v="5">5分後にもう一度</button>' +
+      '<button class="btn" data-a="planSnooze" data-id="' + esc(p.id) + '" data-day="' + day + '" data-v="10">10分後にもう一度</button>' +
+      '<button class="btn" data-a="planPostpone" data-id="' + esc(p.id) + '" data-day="' + day + '">明日に延期</button></div>' +
+      '<div class="row tight"><button class="btn" data-a="planEdit" data-id="' + esc(p.id) + '">編集（時刻・通知など）</button>' +
+      '<button class="btn" data-a="planIcs" data-id="' + esc(p.id) + '" data-day="' + day + '">iPhone のカレンダーにも入れる</button></div>' +
+      (V.icsUrl ? '<a class="btn primary" href="' + esc(V.icsUrl) + '" target="_blank" rel="noopener">カレンダーを開く（「追加」を押す）</a>' : '') +
+      (V.confirm === 'planDel'
+        ? '<div class="banner"><span>この予定をどうしますか？ 削除すると元に戻せません。</span>' + (P.isRepeating(p) ? '<button class="btn" data-a="planDelOne" data-id="' + esc(p.id) + '" data-day="' + day + '">この回だけ取り消す</button>' : '') +
+          '<button class="btn" data-a="planCancel" data-id="' + esc(p.id) + '">中止にする（残す）</button><button class="btn danger" data-a="planDelete" data-id="' + esc(p.id) + '">削除する</button><button class="btn" data-a="cancelConfirm">やめる</button></div>'
+        : '<button class="btn danger" data-a="planDelAsk">中止・削除</button>');
+    return h + '</div>';
+  }
+  function checkCard(p, key, title) {
+    var list = p[key] || [];
+    if (!list.length) return '';
+    return '<section class="card"><span class="label">' + title + '</span><div class="stack" style="gap:8px;margin-top:8px">' + list.map(function (c) {
+      return '<button class="check small-check' + (c.done ? ' on' : '') + '" data-a="planCheck" data-id="' + esc(p.id) + '" data-list="' + key + '" data-item="' + esc(c.id) + '" aria-pressed="' + !!c.done + '"><span class="box">✓</span><span class="txt">' + esc(c.text) + '</span></button>';
+    }).join('') + '</div></section>';
+  }
+
+  // ---- 登録・修正 ----
+  function opt(v, cur, text) { return '<option value="' + esc(v) + '"' + (String(v) === String(cur) ? ' selected' : '') + '>' + esc(text) + '</option>'; }
+  function tval(m) { if (m == null) return ''; var s = L.todText(m); return s.length < 5 ? '0' + s : s; }
+  function planEditor() {
+    var e = V.planEdit, n = P.notifyOf(e), r = e.repeat || { freq: 'none' };
+    function f(id, labelText, inner) { return '<div class="field"><label class="small muted" for="' + id + '">' + labelText + '</label>' + inner + '</div>'; }
+    function chk(key, text) { return '<label class="toggle"><input type="checkbox" id="pn-' + key + '"' + (n[key] ? ' checked' : '') + '>' + text + '</label>'; }
+    var h = '<div class="stack" style="margin-top:16px"><h1 class="display" style="font-size:clamp(26px,5vw,36px)">' + (e.isNew ? '予定・ToDo を追加' : '予定を編集') + '</h1>';
+    if (V.planMsg) h += '<div class="banner"><span>' + esc(V.planMsg) + '</span></div>';
+    h += '<section class="card"><div class="stack">' +
+      f('pe-title', '題（何をするか）', '<input type="text" id="pe-title" value="' + esc(e.title) + '" placeholder="例：通院">') +
+      '<div class="set-grid">' +
+      f('pe-kind', '種類', '<select id="pe-kind">' + P.KINDS.map(function (k) { return opt(k[0], e.kind, k[1]); }).join('') + '</select>') +
+      f('pe-imp', '重要度', '<select id="pe-imp">' + [1, 2, 3, 4].map(function (i) { return opt(i, e.importance || 2, P.IMP[i] + (i === 1 ? '（通知1回）' : i === 2 ? '（30分前と開始）' : i === 3 ? '（前日から・鳴らし直し）' : '（高より多く鳴らし直す）')); }).join('') + '</select>') +
+      f('pe-date', '日付', '<input type="date" id="pe-date" value="' + esc(e.date || '') + '">') + '</div>' +
+      '<div class="set-grid"><label class="toggle"><input type="checkbox" id="pe-tbd"' + (e.time == null ? ' checked' : '') + '>時間未定（時刻なし）</label>' +
+      '<label class="toggle"><input type="checkbox" id="pe-tent"' + (e.tentative ? ' checked' : '') + '>仮の予定</label>' +
+      '<label class="toggle"><input type="checkbox" id="pe-todo"' + (e.todo ? ' checked' : '') + '>ToDo（やること一覧に出す）</label></div>' +
+      '<div class="set-grid">' + f('pe-time', '開始・集合の時刻', '<input type="time" id="pe-time" value="' + tval(e.time) + '">') +
+      f('pe-end', '終了の時刻（任意）', '<input type="time" id="pe-end" value="' + tval(e.end) + '">') +
+      f('pe-depart', '出発の時刻（任意）', '<input type="time" id="pe-depart" value="' + tval(e.depart) + '">') + '</div>' +
+      '<div class="set-grid">' + f('pe-from', '出発地', '<input type="text" id="pe-from" value="' + esc(e.departFrom) + '" placeholder="例：職場">') +
+      f('pe-transport', '移動手段', '<select id="pe-transport">' + opt('', e.transport, '（なし）') + Object.keys(P.TRANSPORT).map(function (k) { return opt(k, e.transport, P.TRANSPORT[k]); }).join('') + '</select>') + '</div>' +
+      '<div class="set-grid">' + f('pe-place', '場所', '<input type="text" id="pe-place" value="' + esc(e.place) + '">') +
+      f('pe-address', '住所（地図で使う）', '<input type="text" id="pe-address" value="' + esc(e.address) + '">') + '</div>' +
+      f('pe-items', '持ち物（1行に1つ）', '<textarea id="pe-items">' + esc((e.items || []).join('\n')) + '</textarea>') +
+      f('pe-confirm', '確認事項（1行に1つ）', '<textarea id="pe-confirm">' + esc((e.confirm || []).map(function (c) { return c.text; }).join('\n')) + '</textarea>') +
+      f('pe-check', 'チェックリスト（1行に1つ）', '<textarea id="pe-check">' + esc((e.checklist || []).map(function (c) { return c.text; }).join('\n')) + '</textarea>') +
+      f('pe-memo', 'メモ', '<textarea id="pe-memo">' + esc(e.memo) + '</textarea>') +
+      '</div></section>';
+    // 移動（列車など）
+    h += '<section class="card"><div class="stack"><span class="label">移動（列車など。確かめた時刻を入れる）</span>' + (e.legs || []).map(function (g, i) {
+      return '<div class="leg-edit"><div class="set-grid">' +
+        f('lg-' + i + '-name', '列車名など', '<input type="text" id="lg-' + i + '-name" value="' + esc(g.name) + '" placeholder="例：のぞみ264号">') +
+        f('lg-' + i + '-from', '発車駅', '<input type="text" id="lg-' + i + '-from" value="' + esc(g.from) + '">') +
+        f('lg-' + i + '-dep', '発車', '<input type="time" id="lg-' + i + '-dep" value="' + tval(g.dep) + '">') +
+        f('lg-' + i + '-to', '到着駅', '<input type="text" id="lg-' + i + '-to" value="' + esc(g.to) + '">') +
+        f('lg-' + i + '-arr', '到着', '<input type="time" id="lg-' + i + '-arr" value="' + tval(g.arr) + '">') +
+        f('lg-' + i + '-move', '何分前に乗り場へ', '<input type="number" id="lg-' + i + '-move" min="0" max="60" value="' + (g.move != null ? g.move : 10) + '">') + '</div>' +
+        f('lg-' + i + '-how', '乗り換え方法・ホーム', '<input type="text" id="lg-' + i + '-how" value="' + esc(g.how) + '">') +
+        '<div class="row tight"><label class="toggle"><input type="checkbox" id="lg-' + i + '-ok"' + (g.verified ? ' checked' : '') + '>時刻は確認済み</label><button class="btn danger" data-a="planLegDel" data-v="' + i + '">この移動を消す</button></div></div>';
+    }).join('') + '<button class="btn" data-a="planLegAdd">＋ 移動を追加</button></div></section>';
+    // 通知と繰り返し
+    h += '<section class="card"><div class="stack"><span class="label">通知（重要度の初期値から変えられる）</span><div class="set-grid">' +
+      chk('dayBefore', '前日 20:00') + chk('h4', '4時間前') + chk('m30', '30分前') + chk('main', '出発（なければ開始）の時刻') + chk('start', '開始の時刻（出発があるとき）') +
+      chk('repeat', '確認するまで5分おきに鳴らし直す') + chk('wake', '早朝の予定は起床の知らせ') + '</div>' +
+      f('pe-wake', '起床の知らせ：出発（開始）の何分前', '<input type="number" id="pe-wake" min="15" max="240" value="' + (e.wakeLead || 90) + '">') +
+      '<p class="small muted">時刻・日付を変えると、通知も入れ替わります（通信が必要）。時間未定のあいだは、前日 20:00 に「時刻を確認しよう」と知らせます。</p></div></section>';
+    h += '<section class="card"><div class="stack"><span class="label">繰り返し</span><div class="set-grid">' +
+      f('pe-freq', '繰り返し', '<select id="pe-freq">' + opt('none', r.freq || 'none', 'しない（1回だけ）') + opt('daily', r.freq, '毎日') + opt('weekly', r.freq, '毎週') + opt('monthly', r.freq, '毎月（同じ日）') + '</select>') +
+      f('pe-until', 'いつまで（任意）', '<input type="date" id="pe-until" value="' + esc(r.until || '') + '">') + '</div>' +
+      '<div class="days" role="group" aria-label="毎週の曜日">' + [1, 2, 3, 4, 5, 6, 7].map(function (d) { var on = (r.days || []).indexOf(d) >= 0; return '<label class="daychk"><input type="checkbox" id="pe-wd-' + d + '"' + (on ? ' checked' : '') + '>' + L.WD[d] + '</label>'; }).join('') + '</div>' +
+      '<p class="small muted">毎週のときは曜日を選びます（選ばなければ日付の曜日）。</p></div></section>';
+    h += '<div class="row tight"><button class="btn primary" data-a="planSave">保存</button><button class="btn" data-a="planEditCancel">やめる</button></div>';
+    return h + '</div>';
+  }
+  // 入力欄の中身を下書きに写す（保存・移動の追加のとき）
+  function readEditor() {
+    var e = V.planEdit; if (!e) return null;
+    var g = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
+    var c = function (id) { var el = document.getElementById(id); return !!(el && el.checked); };
+    var tm = function (id) { var v = g(id); return v ? L.parseTod(v) : null; };
+    var lines = function (id) { return g(id).split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean); };
+    var keep = function (old, texts) { return texts.map(function (x) { var o = (old || []).filter(function (c) { return c.text === x; })[0]; return o || { id: P.newId('c'), text: x, done: false }; }); };
+    e.title = g('pe-title').trim(); e.kind = g('pe-kind') || 'other'; e.importance = Number(g('pe-imp')) || 2; e.date = g('pe-date') || null;
+    e.tentative = c('pe-tent'); e.todo = c('pe-todo');
+    e.time = c('pe-tbd') ? null : tm('pe-time'); e.end = tm('pe-end'); e.depart = tm('pe-depart');
+    e.departFrom = g('pe-from').trim(); e.transport = g('pe-transport'); e.place = g('pe-place').trim(); e.address = g('pe-address').trim();
+    e.items = lines('pe-items'); e.confirm = keep(e.confirm, lines('pe-confirm')); e.checklist = keep(e.checklist, lines('pe-check')); e.memo = g('pe-memo');
+    e.legs = (e.legs || []).map(function (old, i) {
+      return { id: old.id || P.newId('g'), name: g('lg-' + i + '-name').trim(), from: g('lg-' + i + '-from').trim(), to: g('lg-' + i + '-to').trim(),
+        dep: tm('lg-' + i + '-dep'), arr: tm('lg-' + i + '-arr'), move: Math.max(0, Math.min(60, Number(g('lg-' + i + '-move')) || 0)), how: g('lg-' + i + '-how').trim(), verified: c('lg-' + i + '-ok') };
+    });
+    var nd = {}; ['dayBefore', 'h4', 'm30', 'main', 'start', 'repeat', 'wake'].forEach(function (k) { nd[k] = c('pn-' + k); });
+    e.notify = nd; e.wakeLead = Math.max(15, Math.min(240, Number(g('pe-wake')) || 90));
+    var days = []; for (var d = 1; d <= 7; d++) if (c('pe-wd-' + d)) days.push(d);
+    e.repeat = { freq: g('pe-freq') || 'none', days: days, until: g('pe-until') || null };
+    return e;
+  }
+  function savePlanDraft() {
+    var e = readEditor(); if (!e) return;
+    if (!e.title) { V.planMsg = '題を入れてください'; render(); return; }
+    if (!e.date && !e.todo) { V.planMsg = '日付を入れてください（日付のないものは「ToDo」にしてください）'; render(); return; }
+    if (e.time == null && e.depart != null && !e.todo) e.time = null;
+    var clean = JSON.parse(JSON.stringify(e)); delete clean.isNew;
+    clean.updatedAt = Date.now();
+    var list = plans(), i = -1;
+    for (var k = 0; k < list.length; k++) if (list[k].id === clean.id) i = k;
+    // 時刻や日付を変えたら、前の「確認」と「スヌーズ」は消す（新しい時刻で知らせ直す）
+    if (i >= 0) { var o = list[i]; if (o.date !== clean.date || o.time !== clean.time || o.depart !== clean.depart) { clean.acks = {}; clean.snoozes = []; } list[i] = clean; }
+    else list.push(clean);
+    V.planEdit = null; V.planMsg = null; V.planOpen = { id: clean.id, day: clean.date || today() }; V.icsUrl = null;
+    save(); render();
+  }
+  function planIcs(b) {
+    var p = findPlan(b.dataset.id); if (!p || !PUSH) { V.planMsg = 'カレンダーに入れるには、通知サーバーの設定が必要です'; render(); return; }
+    if (!PS.device) { PS.device = newDeviceId(); savePush(); }
+    var text = P.ics([{ p: p, day: b.dataset.day }], Date.now());
+    V.planMsg = 'カレンダー用のファイルを用意しています…'; render();
+    pushApi('/api/ics', { device: PS.device, ics: text }).then(function (j) { V.icsUrl = j.url; V.planMsg = '用意できました。下の「カレンダーを開く」を押して、「追加」を選んでください'; },
+      function () { V.planMsg = '用意できませんでした。通信を確認してください'; }).then(render);
+  }
+
   function mainView() {
     if (V.tab === 'home') {
       var r = V.route;
@@ -1466,6 +1932,7 @@ details summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
       if (r.indexOf('step.') === 0) return simpleView(r.split('.')[1]);
       return homeView();
     }
+    if (V.tab === 'plans') return plansView();
     if (V.tab === 'flow') return flowView();
     if (V.tab === 'study') return studyRecordsView();
     if (V.tab === 'workout') return workoutView();
